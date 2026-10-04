@@ -1,0 +1,3687 @@
+{
+  "report_version": "DRISHTI-Phase3-ResidualDiagnostics-v1.0",
+  "generated_at": "2026-10-03",
+  "evaluation_scope": "REAL_EXPERIMENTAL_BENCH_DATA_ONLY",
+  "non_equivalence_and_scope_disclosure": "1. Each dataset contains N=1 physical engine (ENG-LIU-ICE-01 and ENG-MATSUI-MU323-01). Results measure generalization to UNSEEN RUNS, UNSEEN ENGINE LOADS, and UNSEEN FAULT MAGNITUDES on the same engine, NOT unseen-engine fleet generalization. 2. Expected sensor responses are fitted empirically on training-only normal operation data and are NOT claimed as validated first-principles physical aero-engine models. 3. Neither dataset is a MALE UAV aero-piston engine; synthetic RUL remains strictly separate in `backend/artifacts/synthetic_baseline_report.json` (`SYNTHETIC-ONLY`).",
+  "archive_verification": {
+    "liu_ice_archive": {
+      "file_path": "data/raw/liu_ice/dxc25liu-ice-main.zip",
+      "size_bytes": 17814194,
+      "md5": "04deed4dc73c880da0d4a4eaba3f4356",
+      "sha256": "2861857c5c9e2d952ea2ad99ddc3699a4435bd17fc4f169265ec4664438b3e24"
+    },
+    "marine_engine_archive": {
+      "file_path": "data/raw/marine_engine_fault/Marine_Engine_Fault_Data_v1.zip",
+      "size_bytes": 26538633,
+      "md5": "f4d246c1bb46e05b26e56221acc2606c",
+      "sha256": "3fba7aa0c288ae1bc05383fb54bf67cbde209d61b26e3e811d4bc2f22f97442b"
+    }
+  },
+  "experiments": {
+    "LiU-ICE-Benchmark-DXC25": {
+      "dataset_id": "LiU-ICE-Benchmark-DXC25",
+      "split_manifest": {
+        "dataset_id": "LiU-ICE-Benchmark-DXC25",
+        "generalization_type": "UNSEEN_RUN_AND_OPPOSITE_OR_SCALED_FAULT_MAGNITUDE (SINGLE_PHYSICAL_ENGINE)",
+        "unseen_engine_generalization_supported": false,
+        "physical_engines_total": 1,
+        "engine_id": "ENG-LIU-ICE-01",
+        "subsample_stride": 5,
+        "effective_sampling_rate_hz": 4.0,
+        "train_physical_runs": [
+          "wltp_NF",
+          "wltp_f_pic_090",
+          "wltp_f_pim_080",
+          "wltp_f_waf_105"
+        ],
+        "test_classification_physical_runs": [
+          "wltp_f_pic_110",
+          "wltp_f_pim_090",
+          "wltp_f_waf_110"
+        ],
+        "test_anomaly_physical_runs": [
+          "wltp_f_pic_110",
+          "wltp_f_pim_090",
+          "wltp_f_waf_110",
+          "wltp_f_iml_6mm"
+        ],
+        "shared_physical_runs_between_train_and_test": 0,
+        "shared_source_files_between_train_and_test": 0,
+        "train_samples": 28868,
+        "test_classification_samples": 21657,
+        "test_anomaly_samples": 28860,
+        "train_class_distribution": {
+          "NF": 8654,
+          "f_pim": 6744,
+          "f_waf": 6737,
+          "f_pic": 6733
+        },
+        "test_classification_class_distribution": {
+          "f_pic": 6746,
+          "f_pim": 6744,
+          "f_waf": 6727,
+          "NF": 1440
+        },
+        "single_run_limitation_note": "wltp_f_iml_6mm (6mm intake manifold orifice leakage) has only 1 physical run in the DXC25 archive. It is excluded from 4-class supervised training/testing to preserve strict zero-shared-run integrity, and is evaluated as an unseen fault class in binary anomaly detection."
+      },
+      "feature_pipelines": {
+        "raw_sensors": {
+          "feature_mode": "raw_sensors",
+          "feature_count": 8,
+          "feature_names": [
+            "intercooler_pressure_pa",
+            "intercooler_temp_c",
+            "intake_manifold_pressure_pa",
+            "air_mass_flow_kgs",
+            "rpm",
+            "throttle_pct",
+            "wastegate_position",
+            "fuel_flow_lph"
+          ],
+          "expected_response_model_type": "None (direct sensor values)",
+          "fit_data_sha256": "db63b0935f9a6d9d96bd80f5200e2b0dffc984e4264007a46220f9ab7f112f07",
+          "fit_sample_count": 28868,
+          "fit_normal_sample_count": 8654,
+          "models": {
+            "DummyClassifier": {
+              "model_name": "DummyClassifier (most_frequent)",
+              "accuracy": 0.0665,
+              "macro_f1": 0.0312,
+              "weighted_f1": 0.0083,
+              "false_alarm_rate_on_normal_test": 0.0,
+              "detection_delay_sec_by_run": {
+                "wltp_f_pic_110": null,
+                "wltp_f_pim_090": null,
+                "wltp_f_waf_110": null
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.0312,
+                "macro_f1_ci95_low": 0.0296,
+                "macro_f1_ci95_high": 0.0326,
+                "accuracy_ci95_low": 0.0628,
+                "accuracy_ci95_high": 0.0697
+              },
+              "per_class_metrics": {
+                "NF": {
+                  "precision": 0.0665,
+                  "recall": 1.0,
+                  "f1_score": 0.1247,
+                  "support": 1440
+                },
+                "f_pic": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6746
+                },
+                "f_pim": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6744
+                },
+                "f_waf": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6727
+                }
+              },
+              "confusion_matrix_labels": [
+                "NF",
+                "f_pic",
+                "f_pim",
+                "f_waf"
+              ],
+              "confusion_matrix": [
+                [
+                  1440,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6746,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6744,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6727,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "LogisticRegression": {
+              "model_name": "LogisticRegression (balanced, L2)",
+              "accuracy": 0.1825,
+              "macro_f1": 0.1391,
+              "weighted_f1": 0.144,
+              "false_alarm_rate_on_normal_test": 0.4979,
+              "detection_delay_sec_by_run": {
+                "wltp_f_pic_110": 0.0,
+                "wltp_f_pim_090": 13.5,
+                "wltp_f_waf_110": 16.5
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.1392,
+                "macro_f1_ci95_low": 0.1352,
+                "macro_f1_ci95_high": 0.1429,
+                "accuracy_ci95_low": 0.178,
+                "accuracy_ci95_high": 0.188
+              },
+              "per_class_metrics": {
+                "NF": {
+                  "precision": 0.0677,
+                  "recall": 0.5021,
+                  "f1_score": 0.1193,
+                  "support": 1440
+                },
+                "f_pic": {
+                  "precision": 0.0043,
+                  "recall": 0.0006,
+                  "f1_score": 0.001,
+                  "support": 6746
+                },
+                "f_pim": {
+                  "precision": 0.3028,
+                  "recall": 0.4374,
+                  "f1_score": 0.3579,
+                  "support": 6744
+                },
+                "f_waf": {
+                  "precision": 0.9386,
+                  "recall": 0.0409,
+                  "f1_score": 0.0783,
+                  "support": 6727
+                }
+              },
+              "confusion_matrix_labels": [
+                "NF",
+                "f_pic",
+                "f_pim",
+                "f_waf"
+              ],
+              "confusion_matrix": [
+                [
+                  723,
+                  36,
+                  680,
+                  1
+                ],
+                [
+                  2475,
+                  4,
+                  4266,
+                  1
+                ],
+                [
+                  3603,
+                  175,
+                  2950,
+                  16
+                ],
+                [
+                  3880,
+                  726,
+                  1846,
+                  275
+                ]
+              ]
+            },
+            "RandomForestClassifier": {
+              "model_name": "RandomForestClassifier (100 trees, max_depth=10)",
+              "accuracy": 0.3138,
+              "macro_f1": 0.2329,
+              "weighted_f1": 0.2578,
+              "false_alarm_rate_on_normal_test": 0.3826,
+              "detection_delay_sec_by_run": {
+                "wltp_f_pic_110": 20.0,
+                "wltp_f_pim_090": 0.0,
+                "wltp_f_waf_110": 17.5
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.2329,
+                "macro_f1_ci95_low": 0.2292,
+                "macro_f1_ci95_high": 0.2362,
+                "accuracy_ci95_low": 0.3072,
+                "accuracy_ci95_high": 0.3192
+              },
+              "per_class_metrics": {
+                "NF": {
+                  "precision": 0.0737,
+                  "recall": 0.6174,
+                  "f1_score": 0.1317,
+                  "support": 1440
+                },
+                "f_pic": {
+                  "precision": 0.0302,
+                  "recall": 0.0021,
+                  "f1_score": 0.0039,
+                  "support": 6746
+                },
+                "f_pim": {
+                  "precision": 0.6345,
+                  "recall": 0.8348,
+                  "f1_score": 0.721,
+                  "support": 6744
+                },
+                "f_waf": {
+                  "precision": 1.0,
+                  "recall": 0.0389,
+                  "f1_score": 0.075,
+                  "support": 6727
+                }
+              },
+              "confusion_matrix_labels": [
+                "NF",
+                "f_pic",
+                "f_pim",
+                "f_waf"
+              ],
+              "confusion_matrix": [
+                [
+                  889,
+                  27,
+                  524,
+                  0
+                ],
+                [
+                  4853,
+                  14,
+                  1879,
+                  0
+                ],
+                [
+                  934,
+                  180,
+                  5630,
+                  0
+                ],
+                [
+                  5383,
+                  242,
+                  840,
+                  262
+                ]
+              ]
+            }
+          },
+          "anomaly_detection": {
+            "threshold_calibration_provenance": "Thresholds calibrated strictly on held-out training normal validation slice (N_fit_normal=6923, N_val_normal=1731). Locked test set (N_test=28860) was never used for threshold selection.",
+            "detectors": {
+              "IsolationForest_ValCalibrated": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 0.5491,
+                  "validation_normal_far": 0.0503,
+                  "test_precision": 0.9815,
+                  "test_recall_true_detection_rate": 0.1025,
+                  "test_missed_fault_rate": 0.8975,
+                  "test_f1_score": 0.1856,
+                  "test_false_alarm_rate_on_normal": 0.0271,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 19.0,
+                    "wltp_f_pic_110": 20.0,
+                    "wltp_f_pim_090": 15.75,
+                    "wltp_f_waf_110": 17.75
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 0.5876,
+                  "validation_normal_far": 0.0104,
+                  "test_precision": 0.991,
+                  "test_recall_true_detection_rate": 0.0369,
+                  "test_missed_fault_rate": 0.9631,
+                  "test_f1_score": 0.0711,
+                  "test_false_alarm_rate_on_normal": 0.0047,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 19.0,
+                    "wltp_f_pic_110": 21.0,
+                    "wltp_f_pim_090": 38.0,
+                    "wltp_f_waf_110": 19.25
+                  }
+                }
+              },
+              "RMS_Normalized_Residual_Score": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 3.0658,
+                  "validation_normal_far": 0.0503,
+                  "test_precision": 0.9895,
+                  "test_recall_true_detection_rate": 0.4637,
+                  "test_missed_fault_rate": 0.5363,
+                  "test_f1_score": 0.6315,
+                  "test_false_alarm_rate_on_normal": 0.0693,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 0.0,
+                    "wltp_f_pic_110": 3.0,
+                    "wltp_f_pim_090": 13.5,
+                    "wltp_f_waf_110": 17.5
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 4.3876,
+                  "validation_normal_far": 0.0104,
+                  "test_precision": 0.9952,
+                  "test_recall_true_detection_rate": 0.3488,
+                  "test_missed_fault_rate": 0.6512,
+                  "test_f1_score": 0.5166,
+                  "test_false_alarm_rate_on_normal": 0.0234,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 0.0,
+                    "wltp_f_pic_110": 3.0,
+                    "wltp_f_pim_090": 14.5,
+                    "wltp_f_waf_110": 17.5
+                  }
+                }
+              }
+            }
+          }
+        },
+        "normalized_sensors": {
+          "feature_mode": "normalized_sensors",
+          "feature_count": 8,
+          "feature_names": [
+            "norm__intercooler_pressure_pa",
+            "norm__intercooler_temp_c",
+            "norm__intake_manifold_pressure_pa",
+            "norm__air_mass_flow_kgs",
+            "norm__rpm",
+            "norm__throttle_pct",
+            "norm__wastegate_position",
+            "norm__fuel_flow_lph"
+          ],
+          "expected_response_model_type": "None (direct sensor values)",
+          "fit_data_sha256": "db63b0935f9a6d9d96bd80f5200e2b0dffc984e4264007a46220f9ab7f112f07",
+          "fit_sample_count": 28868,
+          "fit_normal_sample_count": 8654,
+          "models": {
+            "DummyClassifier": {
+              "model_name": "DummyClassifier (most_frequent)",
+              "accuracy": 0.0665,
+              "macro_f1": 0.0312,
+              "weighted_f1": 0.0083,
+              "false_alarm_rate_on_normal_test": 0.0,
+              "detection_delay_sec_by_run": {
+                "wltp_f_pic_110": null,
+                "wltp_f_pim_090": null,
+                "wltp_f_waf_110": null
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.0312,
+                "macro_f1_ci95_low": 0.0296,
+                "macro_f1_ci95_high": 0.0326,
+                "accuracy_ci95_low": 0.0628,
+                "accuracy_ci95_high": 0.0697
+              },
+              "per_class_metrics": {
+                "NF": {
+                  "precision": 0.0665,
+                  "recall": 1.0,
+                  "f1_score": 0.1247,
+                  "support": 1440
+                },
+                "f_pic": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6746
+                },
+                "f_pim": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6744
+                },
+                "f_waf": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6727
+                }
+              },
+              "confusion_matrix_labels": [
+                "NF",
+                "f_pic",
+                "f_pim",
+                "f_waf"
+              ],
+              "confusion_matrix": [
+                [
+                  1440,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6746,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6744,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6727,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "LogisticRegression": {
+              "model_name": "LogisticRegression (balanced, L2)",
+              "accuracy": 0.201,
+              "macro_f1": 0.1564,
+              "weighted_f1": 0.1605,
+              "false_alarm_rate_on_normal_test": 0.3194,
+              "detection_delay_sec_by_run": {
+                "wltp_f_pic_110": 3.0,
+                "wltp_f_pim_090": 15.5,
+                "wltp_f_waf_110": 18.0
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.1563,
+                "macro_f1_ci95_low": 0.1526,
+                "macro_f1_ci95_high": 0.1597,
+                "accuracy_ci95_low": 0.1961,
+                "accuracy_ci95_high": 0.2054
+              },
+              "per_class_metrics": {
+                "NF": {
+                  "precision": 0.078,
+                  "recall": 0.6806,
+                  "f1_score": 0.14,
+                  "support": 1440
+                },
+                "f_pic": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6746
+                },
+                "f_pim": {
+                  "precision": 0.4005,
+                  "recall": 0.4735,
+                  "f1_score": 0.4339,
+                  "support": 6744
+                },
+                "f_waf": {
+                  "precision": 0.72,
+                  "recall": 0.0268,
+                  "f1_score": 0.0516,
+                  "support": 6727
+                }
+              },
+              "confusion_matrix_labels": [
+                "NF",
+                "f_pic",
+                "f_pim",
+                "f_waf"
+              ],
+              "confusion_matrix": [
+                [
+                  980,
+                  83,
+                  377,
+                  0
+                ],
+                [
+                  3845,
+                  0,
+                  2831,
+                  70
+                ],
+                [
+                  3223,
+                  328,
+                  3193,
+                  0
+                ],
+                [
+                  4512,
+                  464,
+                  1571,
+                  180
+                ]
+              ]
+            },
+            "RandomForestClassifier": {
+              "model_name": "RandomForestClassifier (100 trees, max_depth=10)",
+              "accuracy": 0.3142,
+              "macro_f1": 0.233,
+              "weighted_f1": 0.2578,
+              "false_alarm_rate_on_normal_test": 0.3812,
+              "detection_delay_sec_by_run": {
+                "wltp_f_pic_110": 20.0,
+                "wltp_f_pim_090": 0.0,
+                "wltp_f_waf_110": 17.5
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.233,
+                "macro_f1_ci95_low": 0.2292,
+                "macro_f1_ci95_high": 0.2363,
+                "accuracy_ci95_low": 0.3077,
+                "accuracy_ci95_high": 0.3196
+              },
+              "per_class_metrics": {
+                "NF": {
+                  "precision": 0.0739,
+                  "recall": 0.6188,
+                  "f1_score": 0.132,
+                  "support": 1440
+                },
+                "f_pic": {
+                  "precision": 0.0279,
+                  "recall": 0.0019,
+                  "f1_score": 0.0036,
+                  "support": 6746
+                },
+                "f_pim": {
+                  "precision": 0.6355,
+                  "recall": 0.8366,
+                  "f1_score": 0.7223,
+                  "support": 6744
+                },
+                "f_waf": {
+                  "precision": 1.0,
+                  "recall": 0.0384,
+                  "f1_score": 0.0739,
+                  "support": 6727
+                }
+              },
+              "confusion_matrix_labels": [
+                "NF",
+                "f_pic",
+                "f_pim",
+                "f_waf"
+              ],
+              "confusion_matrix": [
+                [
+                  891,
+                  27,
+                  522,
+                  0
+                ],
+                [
+                  4854,
+                  13,
+                  1879,
+                  0
+                ],
+                [
+                  926,
+                  176,
+                  5642,
+                  0
+                ],
+                [
+                  5384,
+                  250,
+                  835,
+                  258
+                ]
+              ]
+            }
+          },
+          "anomaly_detection": {
+            "threshold_calibration_provenance": "Thresholds calibrated strictly on held-out training normal validation slice (N_fit_normal=6923, N_val_normal=1731). Locked test set (N_test=28860) was never used for threshold selection.",
+            "detectors": {
+              "IsolationForest_ValCalibrated": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 0.5491,
+                  "validation_normal_far": 0.0503,
+                  "test_precision": 0.9815,
+                  "test_recall_true_detection_rate": 0.1025,
+                  "test_missed_fault_rate": 0.8975,
+                  "test_f1_score": 0.1856,
+                  "test_false_alarm_rate_on_normal": 0.0271,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 19.0,
+                    "wltp_f_pic_110": 20.0,
+                    "wltp_f_pim_090": 15.75,
+                    "wltp_f_waf_110": 17.75
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 0.5876,
+                  "validation_normal_far": 0.0104,
+                  "test_precision": 0.991,
+                  "test_recall_true_detection_rate": 0.0369,
+                  "test_missed_fault_rate": 0.9631,
+                  "test_f1_score": 0.0711,
+                  "test_false_alarm_rate_on_normal": 0.0047,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 19.0,
+                    "wltp_f_pic_110": 21.0,
+                    "wltp_f_pim_090": 38.0,
+                    "wltp_f_waf_110": 19.25
+                  }
+                }
+              },
+              "RMS_Normalized_Residual_Score": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 3.0658,
+                  "validation_normal_far": 0.0503,
+                  "test_precision": 0.9895,
+                  "test_recall_true_detection_rate": 0.4637,
+                  "test_missed_fault_rate": 0.5363,
+                  "test_f1_score": 0.6315,
+                  "test_false_alarm_rate_on_normal": 0.0693,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 0.0,
+                    "wltp_f_pic_110": 3.0,
+                    "wltp_f_pim_090": 13.5,
+                    "wltp_f_waf_110": 17.5
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 4.3876,
+                  "validation_normal_far": 0.0104,
+                  "test_precision": 0.9952,
+                  "test_recall_true_detection_rate": 0.3488,
+                  "test_missed_fault_rate": 0.6512,
+                  "test_f1_score": 0.5166,
+                  "test_false_alarm_rate_on_normal": 0.0234,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 0.0,
+                    "wltp_f_pic_110": 3.0,
+                    "wltp_f_pim_090": 14.5,
+                    "wltp_f_waf_110": 17.5
+                  }
+                }
+              }
+            }
+          }
+        },
+        "residual_features": {
+          "feature_mode": "residual_features",
+          "feature_count": 56,
+          "feature_names": [
+            "z__res__intercooler_pressure_pa",
+            "z__res__intercooler_temp_c",
+            "z__res__intake_manifold_pressure_pa",
+            "z__res__air_mass_flow_kgs",
+            "z__rel_res__intercooler_pressure_pa",
+            "z__rel_res__intercooler_temp_c",
+            "z__rel_res__intake_manifold_pressure_pa",
+            "z__rel_res__air_mass_flow_kgs",
+            "z__parity_res__intercooler_pressure_pa",
+            "z__parity_rel__intercooler_pressure_pa",
+            "z__parity_res__intake_manifold_pressure_pa",
+            "z__parity_rel__intake_manifold_pressure_pa",
+            "z__parity_res__air_mass_flow_kgs",
+            "z__parity_rel__air_mass_flow_kgs",
+            "abs_z__res__intercooler_pressure_pa",
+            "abs_z__res__intercooler_temp_c",
+            "abs_z__res__intake_manifold_pressure_pa",
+            "abs_z__res__air_mass_flow_kgs",
+            "abs_z__rel_res__intercooler_pressure_pa",
+            "abs_z__rel_res__intercooler_temp_c",
+            "abs_z__rel_res__intake_manifold_pressure_pa",
+            "abs_z__rel_res__air_mass_flow_kgs",
+            "abs_z__parity_res__intercooler_pressure_pa",
+            "abs_z__parity_rel__intercooler_pressure_pa",
+            "abs_z__parity_res__intake_manifold_pressure_pa",
+            "abs_z__parity_rel__intake_manifold_pressure_pa",
+            "abs_z__parity_res__air_mass_flow_kgs",
+            "abs_z__parity_rel__air_mass_flow_kgs",
+            "smooth_z__res__intercooler_pressure_pa",
+            "smooth_z__res__intercooler_temp_c",
+            "smooth_z__res__intake_manifold_pressure_pa",
+            "smooth_z__res__air_mass_flow_kgs",
+            "smooth_z__rel_res__intercooler_pressure_pa",
+            "smooth_z__rel_res__intercooler_temp_c",
+            "smooth_z__rel_res__intake_manifold_pressure_pa",
+            "smooth_z__rel_res__air_mass_flow_kgs",
+            "smooth_z__parity_res__intercooler_pressure_pa",
+            "smooth_z__parity_rel__intercooler_pressure_pa",
+            "smooth_z__parity_res__intake_manifold_pressure_pa",
+            "smooth_z__parity_rel__intake_manifold_pressure_pa",
+            "smooth_z__parity_res__air_mass_flow_kgs",
+            "smooth_z__parity_rel__air_mass_flow_kgs",
+            "smooth_abs_z__res__intercooler_pressure_pa",
+            "smooth_abs_z__res__intercooler_temp_c",
+            "smooth_abs_z__res__intake_manifold_pressure_pa",
+            "smooth_abs_z__res__air_mass_flow_kgs",
+            "smooth_abs_z__rel_res__intercooler_pressure_pa",
+            "smooth_abs_z__rel_res__intercooler_temp_c",
+            "smooth_abs_z__rel_res__intake_manifold_pressure_pa",
+            "smooth_abs_z__rel_res__air_mass_flow_kgs",
+            "smooth_abs_z__parity_res__intercooler_pressure_pa",
+            "smooth_abs_z__parity_rel__intercooler_pressure_pa",
+            "smooth_abs_z__parity_res__intake_manifold_pressure_pa",
+            "smooth_abs_z__parity_rel__intake_manifold_pressure_pa",
+            "smooth_abs_z__parity_res__air_mass_flow_kgs",
+            "smooth_abs_z__parity_rel__air_mass_flow_kgs"
+          ],
+          "expected_response_model_type": "Empirical degree-2 polynomial Ridge regression + analytical redundancy parity models fitted on training NF samples only (NOT a validated physical engine model)",
+          "fit_data_sha256": "db63b0935f9a6d9d96bd80f5200e2b0dffc984e4264007a46220f9ab7f112f07",
+          "fit_sample_count": 28868,
+          "fit_normal_sample_count": 8654,
+          "models": {
+            "DummyClassifier": {
+              "model_name": "DummyClassifier (most_frequent)",
+              "accuracy": 0.0665,
+              "macro_f1": 0.0312,
+              "weighted_f1": 0.0083,
+              "false_alarm_rate_on_normal_test": 0.0,
+              "detection_delay_sec_by_run": {
+                "wltp_f_pic_110": null,
+                "wltp_f_pim_090": null,
+                "wltp_f_waf_110": null
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.0312,
+                "macro_f1_ci95_low": 0.0296,
+                "macro_f1_ci95_high": 0.0326,
+                "accuracy_ci95_low": 0.0628,
+                "accuracy_ci95_high": 0.0697
+              },
+              "per_class_metrics": {
+                "NF": {
+                  "precision": 0.0665,
+                  "recall": 1.0,
+                  "f1_score": 0.1247,
+                  "support": 1440
+                },
+                "f_pic": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6746
+                },
+                "f_pim": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6744
+                },
+                "f_waf": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6727
+                }
+              },
+              "confusion_matrix_labels": [
+                "NF",
+                "f_pic",
+                "f_pim",
+                "f_waf"
+              ],
+              "confusion_matrix": [
+                [
+                  1440,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6746,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6744,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6727,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "LogisticRegression": {
+              "model_name": "LogisticRegression (balanced, L2)",
+              "accuracy": 0.2995,
+              "macro_f1": 0.2707,
+              "weighted_f1": 0.2752,
+              "false_alarm_rate_on_normal_test": 0.0278,
+              "detection_delay_sec_by_run": {
+                "wltp_f_pic_110": 3.0,
+                "wltp_f_pim_090": 23.25,
+                "wltp_f_waf_110": 17.5
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.2709,
+                "macro_f1_ci95_low": 0.2665,
+                "macro_f1_ci95_high": 0.2757,
+                "accuracy_ci95_low": 0.2945,
+                "accuracy_ci95_high": 0.3053
+              },
+              "per_class_metrics": {
+                "NF": {
+                  "precision": 0.1446,
+                  "recall": 0.9722,
+                  "f1_score": 0.2518,
+                  "support": 1440
+                },
+                "f_pic": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6746
+                },
+                "f_pim": {
+                  "precision": 0.314,
+                  "recall": 0.4275,
+                  "f1_score": 0.3621,
+                  "support": 6744
+                },
+                "f_waf": {
+                  "precision": 0.827,
+                  "recall": 0.3275,
+                  "f1_score": 0.4692,
+                  "support": 6727
+                }
+              },
+              "confusion_matrix_labels": [
+                "NF",
+                "f_pic",
+                "f_pim",
+                "f_waf"
+              ],
+              "confusion_matrix": [
+                [
+                  1400,
+                  23,
+                  2,
+                  15
+                ],
+                [
+                  444,
+                  0,
+                  6254,
+                  48
+                ],
+                [
+                  3451,
+                  12,
+                  2883,
+                  398
+                ],
+                [
+                  4387,
+                  95,
+                  42,
+                  2203
+                ]
+              ]
+            },
+            "RandomForestClassifier": {
+              "model_name": "RandomForestClassifier (100 trees, max_depth=10)",
+              "accuracy": 0.3245,
+              "macro_f1": 0.2888,
+              "weighted_f1": 0.3151,
+              "false_alarm_rate_on_normal_test": 0.359,
+              "detection_delay_sec_by_run": {
+                "wltp_f_pic_110": 0.0,
+                "wltp_f_pim_090": 23.0,
+                "wltp_f_waf_110": 16.75
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.2888,
+                "macro_f1_ci95_low": 0.2847,
+                "macro_f1_ci95_high": 0.2938,
+                "accuracy_ci95_low": 0.3192,
+                "accuracy_ci95_high": 0.3305
+              },
+              "per_class_metrics": {
+                "NF": {
+                  "precision": 0.105,
+                  "recall": 0.641,
+                  "f1_score": 0.1804,
+                  "support": 1440
+                },
+                "f_pic": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6746
+                },
+                "f_pim": {
+                  "precision": 0.2978,
+                  "recall": 0.3683,
+                  "f1_score": 0.3293,
+                  "support": 6744
+                },
+                "f_waf": {
+                  "precision": 0.8064,
+                  "recall": 0.5381,
+                  "f1_score": 0.6455,
+                  "support": 6727
+                }
+              },
+              "confusion_matrix_labels": [
+                "NF",
+                "f_pic",
+                "f_pim",
+                "f_waf"
+              ],
+              "confusion_matrix": [
+                [
+                  923,
+                  0,
+                  0,
+                  517
+                ],
+                [
+                  873,
+                  0,
+                  5844,
+                  29
+                ],
+                [
+                  3918,
+                  19,
+                  2484,
+                  323
+                ],
+                [
+                  3080,
+                  14,
+                  13,
+                  3620
+                ]
+              ]
+            }
+          },
+          "anomaly_detection": {
+            "threshold_calibration_provenance": "Thresholds calibrated strictly on held-out training normal validation slice (N_fit_normal=6923, N_val_normal=1731). Locked test set (N_test=28860) was never used for threshold selection.",
+            "detectors": {
+              "IsolationForest_ValCalibrated": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 0.5176,
+                  "validation_normal_far": 0.0503,
+                  "test_precision": 0.9835,
+                  "test_recall_true_detection_rate": 0.6225,
+                  "test_missed_fault_rate": 0.3775,
+                  "test_f1_score": 0.7625,
+                  "test_false_alarm_rate_on_normal": 0.1464,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 0.0,
+                    "wltp_f_pic_110": 0.25,
+                    "wltp_f_pim_090": 14.5,
+                    "wltp_f_waf_110": 17.5
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 0.568,
+                  "validation_normal_far": 0.0104,
+                  "test_precision": 0.9957,
+                  "test_recall_true_detection_rate": 0.5072,
+                  "test_missed_fault_rate": 0.4928,
+                  "test_f1_score": 0.672,
+                  "test_false_alarm_rate_on_normal": 0.0307,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 0.0,
+                    "wltp_f_pic_110": 3.0,
+                    "wltp_f_pim_090": 14.5,
+                    "wltp_f_waf_110": 17.5
+                  }
+                }
+              },
+              "RMS_Normalized_Residual_Score": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 3.0658,
+                  "validation_normal_far": 0.0503,
+                  "test_precision": 0.9895,
+                  "test_recall_true_detection_rate": 0.4637,
+                  "test_missed_fault_rate": 0.5363,
+                  "test_f1_score": 0.6315,
+                  "test_false_alarm_rate_on_normal": 0.0693,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 0.0,
+                    "wltp_f_pic_110": 3.0,
+                    "wltp_f_pim_090": 13.5,
+                    "wltp_f_waf_110": 17.5
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 4.3876,
+                  "validation_normal_far": 0.0104,
+                  "test_precision": 0.9952,
+                  "test_recall_true_detection_rate": 0.3488,
+                  "test_missed_fault_rate": 0.6512,
+                  "test_f1_score": 0.5166,
+                  "test_false_alarm_rate_on_normal": 0.0234,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 0.0,
+                    "wltp_f_pic_110": 3.0,
+                    "wltp_f_pim_090": 14.5,
+                    "wltp_f_waf_110": 17.5
+                  }
+                }
+              }
+            }
+          }
+        },
+        "residual_plus_normalized": {
+          "feature_mode": "residual_plus_normalized",
+          "feature_count": 64,
+          "feature_names": [
+            "z__res__intercooler_pressure_pa",
+            "z__res__intercooler_temp_c",
+            "z__res__intake_manifold_pressure_pa",
+            "z__res__air_mass_flow_kgs",
+            "z__rel_res__intercooler_pressure_pa",
+            "z__rel_res__intercooler_temp_c",
+            "z__rel_res__intake_manifold_pressure_pa",
+            "z__rel_res__air_mass_flow_kgs",
+            "z__parity_res__intercooler_pressure_pa",
+            "z__parity_rel__intercooler_pressure_pa",
+            "z__parity_res__intake_manifold_pressure_pa",
+            "z__parity_rel__intake_manifold_pressure_pa",
+            "z__parity_res__air_mass_flow_kgs",
+            "z__parity_rel__air_mass_flow_kgs",
+            "abs_z__res__intercooler_pressure_pa",
+            "abs_z__res__intercooler_temp_c",
+            "abs_z__res__intake_manifold_pressure_pa",
+            "abs_z__res__air_mass_flow_kgs",
+            "abs_z__rel_res__intercooler_pressure_pa",
+            "abs_z__rel_res__intercooler_temp_c",
+            "abs_z__rel_res__intake_manifold_pressure_pa",
+            "abs_z__rel_res__air_mass_flow_kgs",
+            "abs_z__parity_res__intercooler_pressure_pa",
+            "abs_z__parity_rel__intercooler_pressure_pa",
+            "abs_z__parity_res__intake_manifold_pressure_pa",
+            "abs_z__parity_rel__intake_manifold_pressure_pa",
+            "abs_z__parity_res__air_mass_flow_kgs",
+            "abs_z__parity_rel__air_mass_flow_kgs",
+            "smooth_z__res__intercooler_pressure_pa",
+            "smooth_z__res__intercooler_temp_c",
+            "smooth_z__res__intake_manifold_pressure_pa",
+            "smooth_z__res__air_mass_flow_kgs",
+            "smooth_z__rel_res__intercooler_pressure_pa",
+            "smooth_z__rel_res__intercooler_temp_c",
+            "smooth_z__rel_res__intake_manifold_pressure_pa",
+            "smooth_z__rel_res__air_mass_flow_kgs",
+            "smooth_z__parity_res__intercooler_pressure_pa",
+            "smooth_z__parity_rel__intercooler_pressure_pa",
+            "smooth_z__parity_res__intake_manifold_pressure_pa",
+            "smooth_z__parity_rel__intake_manifold_pressure_pa",
+            "smooth_z__parity_res__air_mass_flow_kgs",
+            "smooth_z__parity_rel__air_mass_flow_kgs",
+            "smooth_abs_z__res__intercooler_pressure_pa",
+            "smooth_abs_z__res__intercooler_temp_c",
+            "smooth_abs_z__res__intake_manifold_pressure_pa",
+            "smooth_abs_z__res__air_mass_flow_kgs",
+            "smooth_abs_z__rel_res__intercooler_pressure_pa",
+            "smooth_abs_z__rel_res__intercooler_temp_c",
+            "smooth_abs_z__rel_res__intake_manifold_pressure_pa",
+            "smooth_abs_z__rel_res__air_mass_flow_kgs",
+            "smooth_abs_z__parity_res__intercooler_pressure_pa",
+            "smooth_abs_z__parity_rel__intercooler_pressure_pa",
+            "smooth_abs_z__parity_res__intake_manifold_pressure_pa",
+            "smooth_abs_z__parity_rel__intake_manifold_pressure_pa",
+            "smooth_abs_z__parity_res__air_mass_flow_kgs",
+            "smooth_abs_z__parity_rel__air_mass_flow_kgs",
+            "norm__intercooler_pressure_pa",
+            "norm__intercooler_temp_c",
+            "norm__intake_manifold_pressure_pa",
+            "norm__air_mass_flow_kgs",
+            "norm__rpm",
+            "norm__throttle_pct",
+            "norm__wastegate_position",
+            "norm__fuel_flow_lph"
+          ],
+          "expected_response_model_type": "Empirical degree-2 polynomial Ridge regression + analytical redundancy parity models fitted on training NF samples only (NOT a validated physical engine model)",
+          "fit_data_sha256": "db63b0935f9a6d9d96bd80f5200e2b0dffc984e4264007a46220f9ab7f112f07",
+          "fit_sample_count": 28868,
+          "fit_normal_sample_count": 8654,
+          "models": {
+            "DummyClassifier": {
+              "model_name": "DummyClassifier (most_frequent)",
+              "accuracy": 0.0665,
+              "macro_f1": 0.0312,
+              "weighted_f1": 0.0083,
+              "false_alarm_rate_on_normal_test": 0.0,
+              "detection_delay_sec_by_run": {
+                "wltp_f_pic_110": null,
+                "wltp_f_pim_090": null,
+                "wltp_f_waf_110": null
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.0312,
+                "macro_f1_ci95_low": 0.0296,
+                "macro_f1_ci95_high": 0.0326,
+                "accuracy_ci95_low": 0.0628,
+                "accuracy_ci95_high": 0.0697
+              },
+              "per_class_metrics": {
+                "NF": {
+                  "precision": 0.0665,
+                  "recall": 1.0,
+                  "f1_score": 0.1247,
+                  "support": 1440
+                },
+                "f_pic": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6746
+                },
+                "f_pim": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6744
+                },
+                "f_waf": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6727
+                }
+              },
+              "confusion_matrix_labels": [
+                "NF",
+                "f_pic",
+                "f_pim",
+                "f_waf"
+              ],
+              "confusion_matrix": [
+                [
+                  1440,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6746,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6744,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6727,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "LogisticRegression": {
+              "model_name": "LogisticRegression (balanced, L2)",
+              "accuracy": 0.2696,
+              "macro_f1": 0.2244,
+              "weighted_f1": 0.2217,
+              "false_alarm_rate_on_normal_test": 0.0097,
+              "detection_delay_sec_by_run": {
+                "wltp_f_pic_110": 3.5,
+                "wltp_f_pim_090": 38.5,
+                "wltp_f_waf_110": 17.5
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.2245,
+                "macro_f1_ci95_low": 0.22,
+                "macro_f1_ci95_high": 0.2292,
+                "accuracy_ci95_low": 0.2642,
+                "accuracy_ci95_high": 0.2762
+              },
+              "per_class_metrics": {
+                "NF": {
+                  "precision": 0.1338,
+                  "recall": 0.9903,
+                  "f1_score": 0.2357,
+                  "support": 1440
+                },
+                "f_pic": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6746
+                },
+                "f_pim": {
+                  "precision": 0.5395,
+                  "recall": 0.5725,
+                  "f1_score": 0.5555,
+                  "support": 6744
+                },
+                "f_waf": {
+                  "precision": 0.1516,
+                  "recall": 0.0821,
+                  "f1_score": 0.1065,
+                  "support": 6727
+                }
+              },
+              "confusion_matrix_labels": [
+                "NF",
+                "f_pic",
+                "f_pim",
+                "f_waf"
+              ],
+              "confusion_matrix": [
+                [
+                  1426,
+                  11,
+                  3,
+                  0
+                ],
+                [
+                  685,
+                  0,
+                  3044,
+                  3017
+                ],
+                [
+                  2772,
+                  39,
+                  3861,
+                  72
+                ],
+                [
+                  5778,
+                  148,
+                  249,
+                  552
+                ]
+              ]
+            },
+            "RandomForestClassifier": {
+              "model_name": "RandomForestClassifier (100 trees, max_depth=10)",
+              "accuracy": 0.1989,
+              "macro_f1": 0.154,
+              "weighted_f1": 0.1424,
+              "false_alarm_rate_on_normal_test": 0.0,
+              "detection_delay_sec_by_run": {
+                "wltp_f_pic_110": 4.0,
+                "wltp_f_pim_090": 11.75,
+                "wltp_f_waf_110": 23.5
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.1539,
+                "macro_f1_ci95_low": 0.1505,
+                "macro_f1_ci95_high": 0.1573,
+                "accuracy_ci95_low": 0.1943,
+                "accuracy_ci95_high": 0.2036
+              },
+              "per_class_metrics": {
+                "NF": {
+                  "precision": 0.1119,
+                  "recall": 1.0,
+                  "f1_score": 0.2013,
+                  "support": 1440
+                },
+                "f_pic": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6746
+                },
+                "f_pim": {
+                  "precision": 0.3083,
+                  "recall": 0.3886,
+                  "f1_score": 0.3439,
+                  "support": 6744
+                },
+                "f_waf": {
+                  "precision": 0.9686,
+                  "recall": 0.0367,
+                  "f1_score": 0.0708,
+                  "support": 6727
+                }
+              },
+              "confusion_matrix_labels": [
+                "NF",
+                "f_pic",
+                "f_pim",
+                "f_waf"
+              ],
+              "confusion_matrix": [
+                [
+                  1440,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  891,
+                  0,
+                  5854,
+                  1
+                ],
+                [
+                  4101,
+                  15,
+                  2621,
+                  7
+                ],
+                [
+                  6433,
+                  21,
+                  26,
+                  247
+                ]
+              ]
+            }
+          },
+          "anomaly_detection": {
+            "threshold_calibration_provenance": "Thresholds calibrated strictly on held-out training normal validation slice (N_fit_normal=6923, N_val_normal=1731). Locked test set (N_test=28860) was never used for threshold selection.",
+            "detectors": {
+              "IsolationForest_ValCalibrated": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 0.5144,
+                  "validation_normal_far": 0.0503,
+                  "test_precision": 0.9864,
+                  "test_recall_true_detection_rate": 0.5876,
+                  "test_missed_fault_rate": 0.4124,
+                  "test_f1_score": 0.7365,
+                  "test_false_alarm_rate_on_normal": 0.1141,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 0.0,
+                    "wltp_f_pic_110": 2.75,
+                    "wltp_f_pim_090": 16.75,
+                    "wltp_f_waf_110": 17.5
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 0.5525,
+                  "validation_normal_far": 0.0104,
+                  "test_precision": 0.9947,
+                  "test_recall_true_detection_rate": 0.4919,
+                  "test_missed_fault_rate": 0.5081,
+                  "test_f1_score": 0.6583,
+                  "test_false_alarm_rate_on_normal": 0.0365,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 0.0,
+                    "wltp_f_pic_110": 3.0,
+                    "wltp_f_pim_090": 16.75,
+                    "wltp_f_waf_110": 19.0
+                  }
+                }
+              },
+              "RMS_Normalized_Residual_Score": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 3.0658,
+                  "validation_normal_far": 0.0503,
+                  "test_precision": 0.9895,
+                  "test_recall_true_detection_rate": 0.4637,
+                  "test_missed_fault_rate": 0.5363,
+                  "test_f1_score": 0.6315,
+                  "test_false_alarm_rate_on_normal": 0.0693,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 0.0,
+                    "wltp_f_pic_110": 3.0,
+                    "wltp_f_pim_090": 13.5,
+                    "wltp_f_waf_110": 17.5
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 4.3876,
+                  "validation_normal_far": 0.0104,
+                  "test_precision": 0.9952,
+                  "test_recall_true_detection_rate": 0.3488,
+                  "test_missed_fault_rate": 0.6512,
+                  "test_f1_score": 0.5166,
+                  "test_false_alarm_rate_on_normal": 0.0234,
+                  "detection_delay_sec_by_run": {
+                    "wltp_f_iml_6mm": 0.0,
+                    "wltp_f_pic_110": 3.0,
+                    "wltp_f_pim_090": 14.5,
+                    "wltp_f_waf_110": 17.5
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "rul_evaluation": {
+        "status": "NOT_SUPPORTED_NO_GROUND_TRUTH_RUL_LABELS",
+        "reason": "LiU-ICE contains 30-minute WLTP runs with discrete step faults at t=120s. No run-to-failure wear trajectories or ground-truth RUL labels exist."
+      }
+    },
+    "Marine-Engine-Fault-v1.0": {
+      "dataset_id": "Marine-Engine-Fault-v1.0",
+      "split_manifest": {
+        "dataset_id": "Marine-Engine-Fault-v1.0",
+        "generalization_type": "UNSEEN_RUN_AND_UNSEEN_ENGINE_LOAD_REGIME (SINGLE_PHYSICAL_ENGINE)",
+        "unseen_engine_generalization_supported": false,
+        "physical_engines_total": 1,
+        "engine_id": "ENG-MATSUI-MU323-01",
+        "sampling_rate_hz": 0.5,
+        "train_physical_runs": [
+          "Reference_Data",
+          "AC_Fouling_40_Load",
+          "AC_Fouling_75_Load",
+          "AF_Clogging_40_Load",
+          "AF_Clogging_75_Load",
+          "Clogged_Injector_Nozzle1_40_60_85_Load",
+          "CW_Pump_Cavitation_60_Load",
+          "Turbine_Degradation_40_Load",
+          "Turbine_Degradation_60_Load"
+        ],
+        "test_physical_runs": [
+          "AC_Fouling_60_Load",
+          "AC_Fouling_85_Load",
+          "AF_Clogging_60_Load",
+          "AF_Clogging_85_Load",
+          "Clogged_Injector_Nozzle2_LoadProgram",
+          "CW_Pump_Cavitation_85_Load",
+          "Turbine_Degradation_85_Load"
+        ],
+        "shared_physical_runs_between_train_and_test": 0,
+        "shared_source_files_between_train_and_test": 0,
+        "train_samples": 70711,
+        "test_samples": 44059,
+        "train_class_distribution": {
+          "Normal": 39704,
+          "Air-Cooler Fouling": 8149,
+          "Compressor Air-Filter Clogging": 6680,
+          "Injection-Valve Nozzle Clogging": 6492,
+          "Turbine Degradation": 5221,
+          "Cooling-Water Pump Cavitation": 4465
+        },
+        "test_class_distribution": {
+          "Normal": 12189,
+          "Air-Cooler Fouling": 9351,
+          "Compressor Air-Filter Clogging": 8394,
+          "Injection-Valve Nozzle Clogging": 6791,
+          "Cooling-Water Pump Cavitation": 4709,
+          "Turbine Degradation": 2625
+        }
+      },
+      "feature_pipelines": {
+        "raw_sensors": {
+          "feature_mode": "raw_sensors",
+          "feature_count": 34,
+          "feature_names": [
+            "feat__Max. In-Cylinder Press. No.1",
+            "feat__Min. In-Cylinder Press. No.1",
+            "feat__Max. In-Cylinder Press. No.2",
+            "feat__Min. In-Cylinder Press. No.2",
+            "feat__Max. In-Cylinder Press. No.3",
+            "feat__Min. In-Cylinder Press. No.3",
+            "feat__Charge Air Press.",
+            "feat__Fuel Flow",
+            "feat__No.1 Exh.Gas Temp.",
+            "feat__No.2 Exh.Gas Temp.",
+            "feat__No.3 Exh.Gas Temp.",
+            "feat__Exh.Gas Temp. Turbine In",
+            "feat__Exh.Gas Temp. Turbine Out",
+            "feat__Cooling Water Temp. Engine Out I",
+            "feat__Cooling Water Temp. Engine Out II",
+            "feat__Cooling Water Temp. Engine Out III",
+            "feat__LO Temp. Engine In",
+            "feat__LO Temp. Engine Out",
+            "feat__LO Cooling Water Temp. Out",
+            "feat__Charge Air IC Air Temp. In",
+            "feat__Charge Air IC Air Temp. Out",
+            "feat__Charge Air IC Cooling Water Temp. Out",
+            "feat__LO Temp. TCH In",
+            "feat__LO Temp. TCH Out",
+            "feat__LO Circulating Pump Press.",
+            "feat__Fuel transfer pump Press.",
+            "feat__Fresh Cooling Water Press.",
+            "feat__Sea Cooling Water Press.",
+            "feat__TCH LO pump Press.",
+            "feat__Fuel Injector Cooling Oil Press.",
+            "feat__Engine Cooling water flow",
+            "feat__LO Cooling water flow",
+            "feat__Charge Air IC Cooling water flow",
+            "feat__TCH LO Cooling water flow"
+          ],
+          "expected_response_model_type": "None (direct sensor values)",
+          "fit_data_sha256": "13a56eca51ca22af281a655b62fd649f88a04ddaae1b0c4dbed1b456c68e33a7",
+          "fit_sample_count": 70711,
+          "fit_normal_sample_count": 39704,
+          "models": {
+            "DummyClassifier": {
+              "model_name": "DummyClassifier (most_frequent)",
+              "accuracy": 0.2767,
+              "macro_f1": 0.0722,
+              "weighted_f1": 0.1199,
+              "false_alarm_rate_on_normal_test": 0.0,
+              "detection_delay_sec_by_run": {
+                "AC_Fouling_60_Load": null,
+                "AC_Fouling_85_Load": null,
+                "AF_Clogging_60_Load": null,
+                "AF_Clogging_85_Load": null,
+                "CW_Pump_Cavitation_85_Load": null,
+                "Clogged_Injector_Nozzle2_LoadProgram": null,
+                "Turbine_Degradation_85_Load": null
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.0722,
+                "macro_f1_ci95_low": 0.0714,
+                "macro_f1_ci95_high": 0.073,
+                "accuracy_ci95_low": 0.2727,
+                "accuracy_ci95_high": 0.2806
+              },
+              "per_class_metrics": {
+                "Normal": {
+                  "precision": 0.2767,
+                  "recall": 1.0,
+                  "f1_score": 0.4334,
+                  "support": 12189
+                },
+                "Air-Cooler Fouling": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 9351
+                },
+                "Compressor Air-Filter Clogging": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 8394
+                },
+                "Injection-Valve Nozzle Clogging": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6791
+                },
+                "Cooling-Water Pump Cavitation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 4709
+                },
+                "Turbine Degradation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 2625
+                }
+              },
+              "confusion_matrix_labels": [
+                "Normal",
+                "Air-Cooler Fouling",
+                "Compressor Air-Filter Clogging",
+                "Injection-Valve Nozzle Clogging",
+                "Cooling-Water Pump Cavitation",
+                "Turbine Degradation"
+              ],
+              "confusion_matrix": [
+                [
+                  12189,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  9351,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  8394,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6791,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  4709,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  2625,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "LogisticRegression": {
+              "model_name": "LogisticRegression (balanced, L2)",
+              "accuracy": 0.4148,
+              "macro_f1": 0.3119,
+              "weighted_f1": 0.3717,
+              "false_alarm_rate_on_normal_test": 0.229,
+              "detection_delay_sec_by_run": {
+                "AC_Fouling_60_Load": 0.0,
+                "AC_Fouling_85_Load": null,
+                "AF_Clogging_60_Load": 0.0,
+                "AF_Clogging_85_Load": 147.0,
+                "CW_Pump_Cavitation_85_Load": null,
+                "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                "Turbine_Degradation_85_Load": 3300.0
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.3119,
+                "macro_f1_ci95_low": 0.3097,
+                "macro_f1_ci95_high": 0.314,
+                "accuracy_ci95_low": 0.4105,
+                "accuracy_ci95_high": 0.4189
+              },
+              "per_class_metrics": {
+                "Normal": {
+                  "precision": 0.3771,
+                  "recall": 0.771,
+                  "f1_score": 0.5065,
+                  "support": 12189
+                },
+                "Air-Cooler Fouling": {
+                  "precision": 1.0,
+                  "recall": 0.2232,
+                  "f1_score": 0.3649,
+                  "support": 9351
+                },
+                "Compressor Air-Filter Clogging": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 8394
+                },
+                "Injection-Valve Nozzle Clogging": {
+                  "precision": 1.0,
+                  "recall": 1.0,
+                  "f1_score": 1.0,
+                  "support": 6791
+                },
+                "Cooling-Water Pump Cavitation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 4709
+                },
+                "Turbine Degradation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 2625
+                }
+              },
+              "confusion_matrix_labels": [
+                "Normal",
+                "Air-Cooler Fouling",
+                "Compressor Air-Filter Clogging",
+                "Injection-Valve Nozzle Clogging",
+                "Cooling-Water Pump Cavitation",
+                "Turbine Degradation"
+              ],
+              "confusion_matrix": [
+                [
+                  9398,
+                  0,
+                  0,
+                  0,
+                  830,
+                  1961
+                ],
+                [
+                  4710,
+                  2087,
+                  0,
+                  0,
+                  75,
+                  2479
+                ],
+                [
+                  3726,
+                  0,
+                  0,
+                  0,
+                  4636,
+                  32
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  6791,
+                  0,
+                  0
+                ],
+                [
+                  4709,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  2378,
+                  0,
+                  0,
+                  0,
+                  247,
+                  0
+                ]
+              ]
+            },
+            "RandomForestClassifier": {
+              "model_name": "RandomForestClassifier (100 trees, max_depth=10)",
+              "accuracy": 0.3434,
+              "macro_f1": 0.1883,
+              "weighted_f1": 0.2283,
+              "false_alarm_rate_on_normal_test": 0.0592,
+              "detection_delay_sec_by_run": {
+                "AC_Fouling_60_Load": 18.0,
+                "AC_Fouling_85_Load": null,
+                "AF_Clogging_60_Load": null,
+                "AF_Clogging_85_Load": 243.0,
+                "CW_Pump_Cavitation_85_Load": null,
+                "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                "Turbine_Degradation_85_Load": null
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.1883,
+                "macro_f1_ci95_low": 0.1864,
+                "macro_f1_ci95_high": 0.1903,
+                "accuracy_ci95_low": 0.3398,
+                "accuracy_ci95_high": 0.3477
+              },
+              "per_class_metrics": {
+                "Normal": {
+                  "precision": 0.2894,
+                  "recall": 0.9408,
+                  "f1_score": 0.4426,
+                  "support": 12189
+                },
+                "Air-Cooler Fouling": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 9351
+                },
+                "Compressor Air-Filter Clogging": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 8394
+                },
+                "Injection-Valve Nozzle Clogging": {
+                  "precision": 0.947,
+                  "recall": 0.5391,
+                  "f1_score": 0.6871,
+                  "support": 6791
+                },
+                "Cooling-Water Pump Cavitation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 4709
+                },
+                "Turbine Degradation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 2625
+                }
+              },
+              "confusion_matrix_labels": [
+                "Normal",
+                "Air-Cooler Fouling",
+                "Compressor Air-Filter Clogging",
+                "Injection-Valve Nozzle Clogging",
+                "Cooling-Water Pump Cavitation",
+                "Turbine Degradation"
+              ],
+              "confusion_matrix": [
+                [
+                  11467,
+                  0,
+                  0,
+                  167,
+                  0,
+                  555
+                ],
+                [
+                  9342,
+                  0,
+                  0,
+                  0,
+                  0,
+                  9
+                ],
+                [
+                  8356,
+                  0,
+                  0,
+                  38,
+                  0,
+                  0
+                ],
+                [
+                  3130,
+                  0,
+                  0,
+                  3661,
+                  0,
+                  0
+                ],
+                [
+                  4709,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  2625,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            }
+          },
+          "anomaly_detection": {
+            "threshold_calibration_provenance": "Thresholds calibrated strictly on held-out training normal validation slice (N_fit_normal=31763, N_val_normal=7941). Locked test set (N_test=44059) was never used for threshold selection.",
+            "detectors": {
+              "IsolationForest_ValCalibrated": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 0.5627,
+                  "validation_normal_far": 0.05,
+                  "test_precision": 1.0,
+                  "test_recall_true_detection_rate": 0.0489,
+                  "test_missed_fault_rate": 0.9511,
+                  "test_f1_score": 0.0932,
+                  "test_false_alarm_rate_on_normal": 0.0,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": null,
+                    "AC_Fouling_85_Load": 221.0,
+                    "AF_Clogging_60_Load": null,
+                    "AF_Clogging_85_Load": null,
+                    "CW_Pump_Cavitation_85_Load": null,
+                    "Clogged_Injector_Nozzle2_LoadProgram": null,
+                    "Turbine_Degradation_85_Load": null
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 0.5723,
+                  "validation_normal_far": 0.0101,
+                  "test_precision": 1.0,
+                  "test_recall_true_detection_rate": 0.0287,
+                  "test_missed_fault_rate": 0.9713,
+                  "test_f1_score": 0.0558,
+                  "test_false_alarm_rate_on_normal": 0.0,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": null,
+                    "AC_Fouling_85_Load": 3399.0,
+                    "AF_Clogging_60_Load": null,
+                    "AF_Clogging_85_Load": null,
+                    "CW_Pump_Cavitation_85_Load": null,
+                    "Clogged_Injector_Nozzle2_LoadProgram": null,
+                    "Turbine_Degradation_85_Load": null
+                  }
+                }
+              },
+              "RMS_Normalized_Residual_Score": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 1.9781,
+                  "validation_normal_far": 0.05,
+                  "test_precision": 0.805,
+                  "test_recall_true_detection_rate": 0.7554,
+                  "test_missed_fault_rate": 0.2446,
+                  "test_f1_score": 0.7794,
+                  "test_false_alarm_rate_on_normal": 0.4783,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": 67.0,
+                    "AC_Fouling_85_Load": 0.0,
+                    "AF_Clogging_60_Load": 42.0,
+                    "AF_Clogging_85_Load": 0.0,
+                    "CW_Pump_Cavitation_85_Load": 0.0,
+                    "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                    "Turbine_Degradation_85_Load": 623.0
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 3.7132,
+                  "validation_normal_far": 0.0101,
+                  "test_precision": 0.8683,
+                  "test_recall_true_detection_rate": 0.5717,
+                  "test_missed_fault_rate": 0.4283,
+                  "test_f1_score": 0.6894,
+                  "test_false_alarm_rate_on_normal": 0.2268,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": 4066.0,
+                    "AC_Fouling_85_Load": 0.0,
+                    "AF_Clogging_60_Load": null,
+                    "AF_Clogging_85_Load": 3484.0,
+                    "CW_Pump_Cavitation_85_Load": 0.0,
+                    "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                    "Turbine_Degradation_85_Load": 3263.0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "normalized_sensors": {
+          "feature_mode": "normalized_sensors",
+          "feature_count": 34,
+          "feature_names": [
+            "norm__feat__Max. In-Cylinder Press. No.1",
+            "norm__feat__Min. In-Cylinder Press. No.1",
+            "norm__feat__Max. In-Cylinder Press. No.2",
+            "norm__feat__Min. In-Cylinder Press. No.2",
+            "norm__feat__Max. In-Cylinder Press. No.3",
+            "norm__feat__Min. In-Cylinder Press. No.3",
+            "norm__feat__Charge Air Press.",
+            "norm__feat__Fuel Flow",
+            "norm__feat__No.1 Exh.Gas Temp.",
+            "norm__feat__No.2 Exh.Gas Temp.",
+            "norm__feat__No.3 Exh.Gas Temp.",
+            "norm__feat__Exh.Gas Temp. Turbine In",
+            "norm__feat__Exh.Gas Temp. Turbine Out",
+            "norm__feat__Cooling Water Temp. Engine Out I",
+            "norm__feat__Cooling Water Temp. Engine Out II",
+            "norm__feat__Cooling Water Temp. Engine Out III",
+            "norm__feat__LO Temp. Engine In",
+            "norm__feat__LO Temp. Engine Out",
+            "norm__feat__LO Cooling Water Temp. Out",
+            "norm__feat__Charge Air IC Air Temp. In",
+            "norm__feat__Charge Air IC Air Temp. Out",
+            "norm__feat__Charge Air IC Cooling Water Temp. Out",
+            "norm__feat__LO Temp. TCH In",
+            "norm__feat__LO Temp. TCH Out",
+            "norm__feat__LO Circulating Pump Press.",
+            "norm__feat__Fuel transfer pump Press.",
+            "norm__feat__Fresh Cooling Water Press.",
+            "norm__feat__Sea Cooling Water Press.",
+            "norm__feat__TCH LO pump Press.",
+            "norm__feat__Fuel Injector Cooling Oil Press.",
+            "norm__feat__Engine Cooling water flow",
+            "norm__feat__LO Cooling water flow",
+            "norm__feat__Charge Air IC Cooling water flow",
+            "norm__feat__TCH LO Cooling water flow"
+          ],
+          "expected_response_model_type": "None (direct sensor values)",
+          "fit_data_sha256": "13a56eca51ca22af281a655b62fd649f88a04ddaae1b0c4dbed1b456c68e33a7",
+          "fit_sample_count": 70711,
+          "fit_normal_sample_count": 39704,
+          "models": {
+            "DummyClassifier": {
+              "model_name": "DummyClassifier (most_frequent)",
+              "accuracy": 0.2767,
+              "macro_f1": 0.0722,
+              "weighted_f1": 0.1199,
+              "false_alarm_rate_on_normal_test": 0.0,
+              "detection_delay_sec_by_run": {
+                "AC_Fouling_60_Load": null,
+                "AC_Fouling_85_Load": null,
+                "AF_Clogging_60_Load": null,
+                "AF_Clogging_85_Load": null,
+                "CW_Pump_Cavitation_85_Load": null,
+                "Clogged_Injector_Nozzle2_LoadProgram": null,
+                "Turbine_Degradation_85_Load": null
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.0722,
+                "macro_f1_ci95_low": 0.0714,
+                "macro_f1_ci95_high": 0.073,
+                "accuracy_ci95_low": 0.2727,
+                "accuracy_ci95_high": 0.2806
+              },
+              "per_class_metrics": {
+                "Normal": {
+                  "precision": 0.2767,
+                  "recall": 1.0,
+                  "f1_score": 0.4334,
+                  "support": 12189
+                },
+                "Air-Cooler Fouling": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 9351
+                },
+                "Compressor Air-Filter Clogging": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 8394
+                },
+                "Injection-Valve Nozzle Clogging": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6791
+                },
+                "Cooling-Water Pump Cavitation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 4709
+                },
+                "Turbine Degradation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 2625
+                }
+              },
+              "confusion_matrix_labels": [
+                "Normal",
+                "Air-Cooler Fouling",
+                "Compressor Air-Filter Clogging",
+                "Injection-Valve Nozzle Clogging",
+                "Cooling-Water Pump Cavitation",
+                "Turbine Degradation"
+              ],
+              "confusion_matrix": [
+                [
+                  12189,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  9351,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  8394,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6791,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  4709,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  2625,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "LogisticRegression": {
+              "model_name": "LogisticRegression (balanced, L2)",
+              "accuracy": 0.4048,
+              "macro_f1": 0.283,
+              "weighted_f1": 0.3533,
+              "false_alarm_rate_on_normal_test": 0.1368,
+              "detection_delay_sec_by_run": {
+                "AC_Fouling_60_Load": 0.0,
+                "AC_Fouling_85_Load": null,
+                "AF_Clogging_60_Load": 0.0,
+                "AF_Clogging_85_Load": 562.0,
+                "CW_Pump_Cavitation_85_Load": null,
+                "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                "Turbine_Degradation_85_Load": null
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.2831,
+                "macro_f1_ci95_low": 0.2804,
+                "macro_f1_ci95_high": 0.286,
+                "accuracy_ci95_low": 0.4002,
+                "accuracy_ci95_high": 0.4099
+              },
+              "per_class_metrics": {
+                "Normal": {
+                  "precision": 0.4089,
+                  "recall": 0.8632,
+                  "f1_score": 0.5549,
+                  "support": 12189
+                },
+                "Air-Cooler Fouling": {
+                  "precision": 1.0,
+                  "recall": 0.249,
+                  "f1_score": 0.3987,
+                  "support": 9351
+                },
+                "Compressor Air-Filter Clogging": {
+                  "precision": 0.4259,
+                  "recall": 0.0055,
+                  "f1_score": 0.0108,
+                  "support": 8394
+                },
+                "Injection-Valve Nozzle Clogging": {
+                  "precision": 0.7403,
+                  "recall": 0.727,
+                  "f1_score": 0.7336,
+                  "support": 6791
+                },
+                "Cooling-Water Pump Cavitation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 4709
+                },
+                "Turbine Degradation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 2625
+                }
+              },
+              "confusion_matrix_labels": [
+                "Normal",
+                "Air-Cooler Fouling",
+                "Compressor Air-Filter Clogging",
+                "Injection-Valve Nozzle Clogging",
+                "Cooling-Water Pump Cavitation",
+                "Turbine Degradation"
+              ],
+              "confusion_matrix": [
+                [
+                  10522,
+                  0,
+                  53,
+                  15,
+                  0,
+                  1599
+                ],
+                [
+                  5923,
+                  2328,
+                  0,
+                  0,
+                  0,
+                  1100
+                ],
+                [
+                  1955,
+                  0,
+                  46,
+                  1717,
+                  0,
+                  4676
+                ],
+                [
+                  0,
+                  0,
+                  9,
+                  4937,
+                  1668,
+                  177
+                ],
+                [
+                  4709,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  2625,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "RandomForestClassifier": {
+              "model_name": "RandomForestClassifier (100 trees, max_depth=10)",
+              "accuracy": 0.3324,
+              "macro_f1": 0.1674,
+              "weighted_f1": 0.2095,
+              "false_alarm_rate_on_normal_test": 0.0567,
+              "detection_delay_sec_by_run": {
+                "AC_Fouling_60_Load": null,
+                "AC_Fouling_85_Load": null,
+                "AF_Clogging_60_Load": 2325.0,
+                "AF_Clogging_85_Load": 10.0,
+                "CW_Pump_Cavitation_85_Load": null,
+                "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                "Turbine_Degradation_85_Load": null
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.1673,
+                "macro_f1_ci95_low": 0.1652,
+                "macro_f1_ci95_high": 0.1693,
+                "accuracy_ci95_low": 0.3274,
+                "accuracy_ci95_high": 0.3365
+              },
+              "per_class_metrics": {
+                "Normal": {
+                  "precision": 0.2925,
+                  "recall": 0.9433,
+                  "f1_score": 0.4465,
+                  "support": 12189
+                },
+                "Air-Cooler Fouling": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 9351
+                },
+                "Compressor Air-Filter Clogging": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 8394
+                },
+                "Injection-Valve Nozzle Clogging": {
+                  "precision": 0.7001,
+                  "recall": 0.4637,
+                  "f1_score": 0.5579,
+                  "support": 6791
+                },
+                "Cooling-Water Pump Cavitation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 4709
+                },
+                "Turbine Degradation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 2625
+                }
+              },
+              "confusion_matrix_labels": [
+                "Normal",
+                "Air-Cooler Fouling",
+                "Compressor Air-Filter Clogging",
+                "Injection-Valve Nozzle Clogging",
+                "Cooling-Water Pump Cavitation",
+                "Turbine Degradation"
+              ],
+              "confusion_matrix": [
+                [
+                  11498,
+                  0,
+                  0,
+                  449,
+                  0,
+                  242
+                ],
+                [
+                  9351,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  7494,
+                  0,
+                  0,
+                  900,
+                  0,
+                  0
+                ],
+                [
+                  3639,
+                  0,
+                  0,
+                  3149,
+                  0,
+                  3
+                ],
+                [
+                  4709,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  2625,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            }
+          },
+          "anomaly_detection": {
+            "threshold_calibration_provenance": "Thresholds calibrated strictly on held-out training normal validation slice (N_fit_normal=31763, N_val_normal=7941). Locked test set (N_test=44059) was never used for threshold selection.",
+            "detectors": {
+              "IsolationForest_ValCalibrated": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 0.5627,
+                  "validation_normal_far": 0.05,
+                  "test_precision": 1.0,
+                  "test_recall_true_detection_rate": 0.0489,
+                  "test_missed_fault_rate": 0.9511,
+                  "test_f1_score": 0.0932,
+                  "test_false_alarm_rate_on_normal": 0.0,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": null,
+                    "AC_Fouling_85_Load": 221.0,
+                    "AF_Clogging_60_Load": null,
+                    "AF_Clogging_85_Load": null,
+                    "CW_Pump_Cavitation_85_Load": null,
+                    "Clogged_Injector_Nozzle2_LoadProgram": null,
+                    "Turbine_Degradation_85_Load": null
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 0.5723,
+                  "validation_normal_far": 0.0101,
+                  "test_precision": 1.0,
+                  "test_recall_true_detection_rate": 0.0287,
+                  "test_missed_fault_rate": 0.9713,
+                  "test_f1_score": 0.0558,
+                  "test_false_alarm_rate_on_normal": 0.0,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": null,
+                    "AC_Fouling_85_Load": 3399.0,
+                    "AF_Clogging_60_Load": null,
+                    "AF_Clogging_85_Load": null,
+                    "CW_Pump_Cavitation_85_Load": null,
+                    "Clogged_Injector_Nozzle2_LoadProgram": null,
+                    "Turbine_Degradation_85_Load": null
+                  }
+                }
+              },
+              "RMS_Normalized_Residual_Score": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 1.9781,
+                  "validation_normal_far": 0.05,
+                  "test_precision": 0.805,
+                  "test_recall_true_detection_rate": 0.7554,
+                  "test_missed_fault_rate": 0.2446,
+                  "test_f1_score": 0.7794,
+                  "test_false_alarm_rate_on_normal": 0.4783,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": 67.0,
+                    "AC_Fouling_85_Load": 0.0,
+                    "AF_Clogging_60_Load": 42.0,
+                    "AF_Clogging_85_Load": 0.0,
+                    "CW_Pump_Cavitation_85_Load": 0.0,
+                    "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                    "Turbine_Degradation_85_Load": 623.0
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 3.7132,
+                  "validation_normal_far": 0.0101,
+                  "test_precision": 0.8683,
+                  "test_recall_true_detection_rate": 0.5717,
+                  "test_missed_fault_rate": 0.4283,
+                  "test_f1_score": 0.6894,
+                  "test_false_alarm_rate_on_normal": 0.2268,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": 4066.0,
+                    "AC_Fouling_85_Load": 0.0,
+                    "AF_Clogging_60_Load": null,
+                    "AF_Clogging_85_Load": 3484.0,
+                    "CW_Pump_Cavitation_85_Load": 0.0,
+                    "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                    "Turbine_Degradation_85_Load": 3263.0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "residual_features": {
+          "feature_mode": "residual_features",
+          "feature_count": 132,
+          "feature_names": [
+            "z__res__feat__Max. In-Cylinder Press. No.1",
+            "z__res__feat__Min. In-Cylinder Press. No.1",
+            "z__res__feat__Max. In-Cylinder Press. No.2",
+            "z__res__feat__Min. In-Cylinder Press. No.2",
+            "z__res__feat__Max. In-Cylinder Press. No.3",
+            "z__res__feat__Min. In-Cylinder Press. No.3",
+            "z__res__feat__Charge Air Press.",
+            "z__res__feat__Fuel Flow",
+            "z__res__feat__No.1 Exh.Gas Temp.",
+            "z__res__feat__No.2 Exh.Gas Temp.",
+            "z__res__feat__No.3 Exh.Gas Temp.",
+            "z__res__feat__Exh.Gas Temp. Turbine In",
+            "z__res__feat__Exh.Gas Temp. Turbine Out",
+            "z__res__feat__Cooling Water Temp. Engine Out I",
+            "z__res__feat__Cooling Water Temp. Engine Out II",
+            "z__res__feat__Cooling Water Temp. Engine Out III",
+            "z__res__feat__LO Temp. Engine In",
+            "z__res__feat__LO Temp. Engine Out",
+            "z__res__feat__LO Cooling Water Temp. Out",
+            "z__res__feat__Charge Air IC Air Temp. In",
+            "z__res__feat__Charge Air IC Air Temp. Out",
+            "z__res__feat__Charge Air IC Cooling Water Temp. Out",
+            "z__res__feat__LO Temp. TCH In",
+            "z__res__feat__LO Temp. TCH Out",
+            "z__res__feat__LO Circulating Pump Press.",
+            "z__res__feat__Fuel transfer pump Press.",
+            "z__res__feat__Fresh Cooling Water Press.",
+            "z__res__feat__Sea Cooling Water Press.",
+            "z__res__feat__TCH LO pump Press.",
+            "z__res__feat__Fuel Injector Cooling Oil Press.",
+            "z__res__feat__Engine Cooling water flow",
+            "z__res__feat__LO Cooling water flow",
+            "z__res__feat__Charge Air IC Cooling water flow",
+            "z__res__feat__TCH LO Cooling water flow",
+            "z__sym__pmax1_dev",
+            "z__sym__pmax2_dev",
+            "z__sym__pmax3_dev",
+            "z__sym__pmax_max_abs_dev",
+            "z__sym__pmax_min_dev",
+            "z__sym__egt1_dev",
+            "z__sym__egt2_dev",
+            "z__sym__egt3_dev",
+            "z__sym__egt_max_abs_dev",
+            "z__sym__egt_min_dev",
+            "z__therm__ic_air_drop",
+            "z__therm__ic_approach_temp",
+            "z__therm__ic_water_rise",
+            "z__therm__turbine_temp_drop",
+            "z__therm__turb_in_minus_cyl_egt",
+            "smooth_z__res__feat__Max. In-Cylinder Press. No.1",
+            "smooth_z__res__feat__Min. In-Cylinder Press. No.1",
+            "smooth_z__res__feat__Max. In-Cylinder Press. No.2",
+            "smooth_z__res__feat__Min. In-Cylinder Press. No.2",
+            "smooth_z__res__feat__Max. In-Cylinder Press. No.3",
+            "smooth_z__res__feat__Min. In-Cylinder Press. No.3",
+            "smooth_z__res__feat__Charge Air Press.",
+            "smooth_z__res__feat__Fuel Flow",
+            "smooth_z__res__feat__No.1 Exh.Gas Temp.",
+            "smooth_z__res__feat__No.2 Exh.Gas Temp.",
+            "smooth_z__res__feat__No.3 Exh.Gas Temp.",
+            "smooth_z__res__feat__Exh.Gas Temp. Turbine In",
+            "smooth_z__res__feat__Exh.Gas Temp. Turbine Out",
+            "smooth_z__res__feat__Cooling Water Temp. Engine Out I",
+            "smooth_z__res__feat__Cooling Water Temp. Engine Out II",
+            "smooth_z__res__feat__Cooling Water Temp. Engine Out III",
+            "smooth_z__res__feat__LO Temp. Engine In",
+            "smooth_z__res__feat__LO Temp. Engine Out",
+            "smooth_z__res__feat__LO Cooling Water Temp. Out",
+            "smooth_z__res__feat__Charge Air IC Air Temp. In",
+            "smooth_z__res__feat__Charge Air IC Air Temp. Out",
+            "smooth_z__res__feat__Charge Air IC Cooling Water Temp. Out",
+            "smooth_z__res__feat__LO Temp. TCH In",
+            "smooth_z__res__feat__LO Temp. TCH Out",
+            "smooth_z__res__feat__LO Circulating Pump Press.",
+            "smooth_z__res__feat__Fuel transfer pump Press.",
+            "smooth_z__res__feat__Fresh Cooling Water Press.",
+            "smooth_z__res__feat__Sea Cooling Water Press.",
+            "smooth_z__res__feat__TCH LO pump Press.",
+            "smooth_z__res__feat__Fuel Injector Cooling Oil Press.",
+            "smooth_z__res__feat__Engine Cooling water flow",
+            "smooth_z__res__feat__LO Cooling water flow",
+            "smooth_z__res__feat__Charge Air IC Cooling water flow",
+            "smooth_z__res__feat__TCH LO Cooling water flow",
+            "smooth_z__sym__pmax1_dev",
+            "smooth_z__sym__pmax2_dev",
+            "smooth_z__sym__pmax3_dev",
+            "smooth_z__sym__pmax_max_abs_dev",
+            "smooth_z__sym__pmax_min_dev",
+            "smooth_z__sym__egt1_dev",
+            "smooth_z__sym__egt2_dev",
+            "smooth_z__sym__egt3_dev",
+            "smooth_z__sym__egt_max_abs_dev",
+            "smooth_z__sym__egt_min_dev",
+            "smooth_z__therm__ic_air_drop",
+            "smooth_z__therm__ic_approach_temp",
+            "smooth_z__therm__ic_water_rise",
+            "smooth_z__therm__turbine_temp_drop",
+            "smooth_z__therm__turb_in_minus_cyl_egt",
+            "roll_std_z__feat__Max. In-Cylinder Press. No.1",
+            "roll_std_z__feat__Min. In-Cylinder Press. No.1",
+            "roll_std_z__feat__Max. In-Cylinder Press. No.2",
+            "roll_std_z__feat__Min. In-Cylinder Press. No.2",
+            "roll_std_z__feat__Max. In-Cylinder Press. No.3",
+            "roll_std_z__feat__Min. In-Cylinder Press. No.3",
+            "roll_std_z__feat__Charge Air Press.",
+            "roll_std_z__feat__Fuel Flow",
+            "roll_std_z__feat__No.1 Exh.Gas Temp.",
+            "roll_std_z__feat__No.2 Exh.Gas Temp.",
+            "roll_std_z__feat__No.3 Exh.Gas Temp.",
+            "roll_std_z__feat__Exh.Gas Temp. Turbine In",
+            "roll_std_z__feat__Exh.Gas Temp. Turbine Out",
+            "roll_std_z__feat__Cooling Water Temp. Engine Out I",
+            "roll_std_z__feat__Cooling Water Temp. Engine Out II",
+            "roll_std_z__feat__Cooling Water Temp. Engine Out III",
+            "roll_std_z__feat__LO Temp. Engine In",
+            "roll_std_z__feat__LO Temp. Engine Out",
+            "roll_std_z__feat__LO Cooling Water Temp. Out",
+            "roll_std_z__feat__Charge Air IC Air Temp. In",
+            "roll_std_z__feat__Charge Air IC Air Temp. Out",
+            "roll_std_z__feat__Charge Air IC Cooling Water Temp. Out",
+            "roll_std_z__feat__LO Temp. TCH In",
+            "roll_std_z__feat__LO Temp. TCH Out",
+            "roll_std_z__feat__LO Circulating Pump Press.",
+            "roll_std_z__feat__Fuel transfer pump Press.",
+            "roll_std_z__feat__Fresh Cooling Water Press.",
+            "roll_std_z__feat__Sea Cooling Water Press.",
+            "roll_std_z__feat__TCH LO pump Press.",
+            "roll_std_z__feat__Fuel Injector Cooling Oil Press.",
+            "roll_std_z__feat__Engine Cooling water flow",
+            "roll_std_z__feat__LO Cooling water flow",
+            "roll_std_z__feat__Charge Air IC Cooling water flow",
+            "roll_std_z__feat__TCH LO Cooling water flow"
+          ],
+          "expected_response_model_type": "Empirical degree-2 polynomial Ridge regression on operating/boundary conditions fitted on training Normal samples only (NOT a validated physical engine model)",
+          "fit_data_sha256": "13a56eca51ca22af281a655b62fd649f88a04ddaae1b0c4dbed1b456c68e33a7",
+          "fit_sample_count": 70711,
+          "fit_normal_sample_count": 39704,
+          "models": {
+            "DummyClassifier": {
+              "model_name": "DummyClassifier (most_frequent)",
+              "accuracy": 0.2767,
+              "macro_f1": 0.0722,
+              "weighted_f1": 0.1199,
+              "false_alarm_rate_on_normal_test": 0.0,
+              "detection_delay_sec_by_run": {
+                "AC_Fouling_60_Load": null,
+                "AC_Fouling_85_Load": null,
+                "AF_Clogging_60_Load": null,
+                "AF_Clogging_85_Load": null,
+                "CW_Pump_Cavitation_85_Load": null,
+                "Clogged_Injector_Nozzle2_LoadProgram": null,
+                "Turbine_Degradation_85_Load": null
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.0722,
+                "macro_f1_ci95_low": 0.0714,
+                "macro_f1_ci95_high": 0.073,
+                "accuracy_ci95_low": 0.2727,
+                "accuracy_ci95_high": 0.2806
+              },
+              "per_class_metrics": {
+                "Normal": {
+                  "precision": 0.2767,
+                  "recall": 1.0,
+                  "f1_score": 0.4334,
+                  "support": 12189
+                },
+                "Air-Cooler Fouling": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 9351
+                },
+                "Compressor Air-Filter Clogging": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 8394
+                },
+                "Injection-Valve Nozzle Clogging": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6791
+                },
+                "Cooling-Water Pump Cavitation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 4709
+                },
+                "Turbine Degradation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 2625
+                }
+              },
+              "confusion_matrix_labels": [
+                "Normal",
+                "Air-Cooler Fouling",
+                "Compressor Air-Filter Clogging",
+                "Injection-Valve Nozzle Clogging",
+                "Cooling-Water Pump Cavitation",
+                "Turbine Degradation"
+              ],
+              "confusion_matrix": [
+                [
+                  12189,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  9351,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  8394,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6791,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  4709,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  2625,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "LogisticRegression": {
+              "model_name": "LogisticRegression (balanced, L2)",
+              "accuracy": 0.5877,
+              "macro_f1": 0.5408,
+              "weighted_f1": 0.546,
+              "false_alarm_rate_on_normal_test": 0.2062,
+              "detection_delay_sec_by_run": {
+                "AC_Fouling_60_Load": 0.0,
+                "AC_Fouling_85_Load": 3015.0,
+                "AF_Clogging_60_Load": 513.0,
+                "AF_Clogging_85_Load": null,
+                "CW_Pump_Cavitation_85_Load": 0.0,
+                "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                "Turbine_Degradation_85_Load": 1360.0
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.5409,
+                "macro_f1_ci95_low": 0.537,
+                "macro_f1_ci95_high": 0.5451,
+                "accuracy_ci95_low": 0.5838,
+                "accuracy_ci95_high": 0.5926
+              },
+              "per_class_metrics": {
+                "Normal": {
+                  "precision": 0.5244,
+                  "recall": 0.7938,
+                  "f1_score": 0.6316,
+                  "support": 12189
+                },
+                "Air-Cooler Fouling": {
+                  "precision": 1.0,
+                  "recall": 0.2748,
+                  "f1_score": 0.4312,
+                  "support": 9351
+                },
+                "Compressor Air-Filter Clogging": {
+                  "precision": 0.7872,
+                  "recall": 0.1128,
+                  "f1_score": 0.1974,
+                  "support": 8394
+                },
+                "Injection-Valve Nozzle Clogging": {
+                  "precision": 0.9695,
+                  "recall": 1.0,
+                  "f1_score": 0.9845,
+                  "support": 6791
+                },
+                "Cooling-Water Pump Cavitation": {
+                  "precision": 0.4992,
+                  "recall": 0.9329,
+                  "f1_score": 0.6504,
+                  "support": 4709
+                },
+                "Turbine Degradation": {
+                  "precision": 0.2512,
+                  "recall": 0.5771,
+                  "f1_score": 0.3501,
+                  "support": 2625
+                }
+              },
+              "confusion_matrix_labels": [
+                "Normal",
+                "Air-Cooler Fouling",
+                "Compressor Air-Filter Clogging",
+                "Injection-Valve Nozzle Clogging",
+                "Cooling-Water Pump Cavitation",
+                "Turbine Degradation"
+              ],
+              "confusion_matrix": [
+                [
+                  9676,
+                  0,
+                  229,
+                  0,
+                  227,
+                  2057
+                ],
+                [
+                  2749,
+                  2570,
+                  0,
+                  214,
+                  1700,
+                  2118
+                ],
+                [
+                  4627,
+                  0,
+                  947,
+                  0,
+                  2480,
+                  340
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  6791,
+                  0,
+                  0
+                ],
+                [
+                  316,
+                  0,
+                  0,
+                  0,
+                  4393,
+                  0
+                ],
+                [
+                  1083,
+                  0,
+                  27,
+                  0,
+                  0,
+                  1515
+                ]
+              ]
+            },
+            "RandomForestClassifier": {
+              "model_name": "RandomForestClassifier (100 trees, max_depth=10)",
+              "accuracy": 0.491,
+              "macro_f1": 0.3883,
+              "weighted_f1": 0.4118,
+              "false_alarm_rate_on_normal_test": 0.0349,
+              "detection_delay_sec_by_run": {
+                "AC_Fouling_60_Load": 220.0,
+                "AC_Fouling_85_Load": null,
+                "AF_Clogging_60_Load": 6101.0,
+                "AF_Clogging_85_Load": null,
+                "CW_Pump_Cavitation_85_Load": 3116.0,
+                "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                "Turbine_Degradation_85_Load": 3047.0
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.3882,
+                "macro_f1_ci95_low": 0.3846,
+                "macro_f1_ci95_high": 0.3916,
+                "accuracy_ci95_low": 0.4861,
+                "accuracy_ci95_high": 0.4949
+              },
+              "per_class_metrics": {
+                "Normal": {
+                  "precision": 0.3702,
+                  "recall": 0.9651,
+                  "f1_score": 0.5351,
+                  "support": 12189
+                },
+                "Air-Cooler Fouling": {
+                  "precision": 1.0,
+                  "recall": 0.1327,
+                  "f1_score": 0.2343,
+                  "support": 9351
+                },
+                "Compressor Air-Filter Clogging": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 8394
+                },
+                "Injection-Valve Nozzle Clogging": {
+                  "precision": 1.0,
+                  "recall": 1.0,
+                  "f1_score": 1.0,
+                  "support": 6791
+                },
+                "Cooling-Water Pump Cavitation": {
+                  "precision": 0.9957,
+                  "recall": 0.3897,
+                  "f1_score": 0.5601,
+                  "support": 4709
+                },
+                "Turbine Degradation": {
+                  "precision": 0.0004,
+                  "recall": 0.0004,
+                  "f1_score": 0.0004,
+                  "support": 2625
+                }
+              },
+              "confusion_matrix_labels": [
+                "Normal",
+                "Air-Cooler Fouling",
+                "Compressor Air-Filter Clogging",
+                "Injection-Valve Nozzle Clogging",
+                "Cooling-Water Pump Cavitation",
+                "Turbine Degradation"
+              ],
+              "confusion_matrix": [
+                [
+                  11763,
+                  0,
+                  0,
+                  0,
+                  0,
+                  426
+                ],
+                [
+                  6131,
+                  1241,
+                  0,
+                  0,
+                  0,
+                  1979
+                ],
+                [
+                  8386,
+                  0,
+                  0,
+                  0,
+                  8,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  6791,
+                  0,
+                  0
+                ],
+                [
+                  2874,
+                  0,
+                  0,
+                  0,
+                  1835,
+                  0
+                ],
+                [
+                  2624,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1
+                ]
+              ]
+            }
+          },
+          "anomaly_detection": {
+            "threshold_calibration_provenance": "Thresholds calibrated strictly on held-out training normal validation slice (N_fit_normal=31763, N_val_normal=7941). Locked test set (N_test=44059) was never used for threshold selection.",
+            "detectors": {
+              "IsolationForest_ValCalibrated": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 0.457,
+                  "validation_normal_far": 0.05,
+                  "test_precision": 0.785,
+                  "test_recall_true_detection_rate": 0.7963,
+                  "test_missed_fault_rate": 0.2037,
+                  "test_f1_score": 0.7906,
+                  "test_false_alarm_rate_on_normal": 0.5701,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": 146.0,
+                    "AC_Fouling_85_Load": 0.0,
+                    "AF_Clogging_60_Load": 45.0,
+                    "AF_Clogging_85_Load": 0.0,
+                    "CW_Pump_Cavitation_85_Load": 0.0,
+                    "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                    "Turbine_Degradation_85_Load": 75.0
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 0.4759,
+                  "validation_normal_far": 0.0101,
+                  "test_precision": 0.7968,
+                  "test_recall_true_detection_rate": 0.7488,
+                  "test_missed_fault_rate": 0.2512,
+                  "test_f1_score": 0.7721,
+                  "test_false_alarm_rate_on_normal": 0.4994,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": 320.0,
+                    "AC_Fouling_85_Load": 0.0,
+                    "AF_Clogging_60_Load": 312.0,
+                    "AF_Clogging_85_Load": 0.0,
+                    "CW_Pump_Cavitation_85_Load": 0.0,
+                    "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                    "Turbine_Degradation_85_Load": 1206.0
+                  }
+                }
+              },
+              "RMS_Normalized_Residual_Score": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 1.9781,
+                  "validation_normal_far": 0.05,
+                  "test_precision": 0.805,
+                  "test_recall_true_detection_rate": 0.7554,
+                  "test_missed_fault_rate": 0.2446,
+                  "test_f1_score": 0.7794,
+                  "test_false_alarm_rate_on_normal": 0.4783,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": 67.0,
+                    "AC_Fouling_85_Load": 0.0,
+                    "AF_Clogging_60_Load": 42.0,
+                    "AF_Clogging_85_Load": 0.0,
+                    "CW_Pump_Cavitation_85_Load": 0.0,
+                    "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                    "Turbine_Degradation_85_Load": 623.0
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 3.7132,
+                  "validation_normal_far": 0.0101,
+                  "test_precision": 0.8683,
+                  "test_recall_true_detection_rate": 0.5717,
+                  "test_missed_fault_rate": 0.4283,
+                  "test_f1_score": 0.6894,
+                  "test_false_alarm_rate_on_normal": 0.2268,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": 4066.0,
+                    "AC_Fouling_85_Load": 0.0,
+                    "AF_Clogging_60_Load": null,
+                    "AF_Clogging_85_Load": 3484.0,
+                    "CW_Pump_Cavitation_85_Load": 0.0,
+                    "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                    "Turbine_Degradation_85_Load": 3263.0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "residual_plus_normalized": {
+          "feature_mode": "residual_plus_normalized",
+          "feature_count": 166,
+          "feature_names": [
+            "z__res__feat__Max. In-Cylinder Press. No.1",
+            "z__res__feat__Min. In-Cylinder Press. No.1",
+            "z__res__feat__Max. In-Cylinder Press. No.2",
+            "z__res__feat__Min. In-Cylinder Press. No.2",
+            "z__res__feat__Max. In-Cylinder Press. No.3",
+            "z__res__feat__Min. In-Cylinder Press. No.3",
+            "z__res__feat__Charge Air Press.",
+            "z__res__feat__Fuel Flow",
+            "z__res__feat__No.1 Exh.Gas Temp.",
+            "z__res__feat__No.2 Exh.Gas Temp.",
+            "z__res__feat__No.3 Exh.Gas Temp.",
+            "z__res__feat__Exh.Gas Temp. Turbine In",
+            "z__res__feat__Exh.Gas Temp. Turbine Out",
+            "z__res__feat__Cooling Water Temp. Engine Out I",
+            "z__res__feat__Cooling Water Temp. Engine Out II",
+            "z__res__feat__Cooling Water Temp. Engine Out III",
+            "z__res__feat__LO Temp. Engine In",
+            "z__res__feat__LO Temp. Engine Out",
+            "z__res__feat__LO Cooling Water Temp. Out",
+            "z__res__feat__Charge Air IC Air Temp. In",
+            "z__res__feat__Charge Air IC Air Temp. Out",
+            "z__res__feat__Charge Air IC Cooling Water Temp. Out",
+            "z__res__feat__LO Temp. TCH In",
+            "z__res__feat__LO Temp. TCH Out",
+            "z__res__feat__LO Circulating Pump Press.",
+            "z__res__feat__Fuel transfer pump Press.",
+            "z__res__feat__Fresh Cooling Water Press.",
+            "z__res__feat__Sea Cooling Water Press.",
+            "z__res__feat__TCH LO pump Press.",
+            "z__res__feat__Fuel Injector Cooling Oil Press.",
+            "z__res__feat__Engine Cooling water flow",
+            "z__res__feat__LO Cooling water flow",
+            "z__res__feat__Charge Air IC Cooling water flow",
+            "z__res__feat__TCH LO Cooling water flow",
+            "z__sym__pmax1_dev",
+            "z__sym__pmax2_dev",
+            "z__sym__pmax3_dev",
+            "z__sym__pmax_max_abs_dev",
+            "z__sym__pmax_min_dev",
+            "z__sym__egt1_dev",
+            "z__sym__egt2_dev",
+            "z__sym__egt3_dev",
+            "z__sym__egt_max_abs_dev",
+            "z__sym__egt_min_dev",
+            "z__therm__ic_air_drop",
+            "z__therm__ic_approach_temp",
+            "z__therm__ic_water_rise",
+            "z__therm__turbine_temp_drop",
+            "z__therm__turb_in_minus_cyl_egt",
+            "smooth_z__res__feat__Max. In-Cylinder Press. No.1",
+            "smooth_z__res__feat__Min. In-Cylinder Press. No.1",
+            "smooth_z__res__feat__Max. In-Cylinder Press. No.2",
+            "smooth_z__res__feat__Min. In-Cylinder Press. No.2",
+            "smooth_z__res__feat__Max. In-Cylinder Press. No.3",
+            "smooth_z__res__feat__Min. In-Cylinder Press. No.3",
+            "smooth_z__res__feat__Charge Air Press.",
+            "smooth_z__res__feat__Fuel Flow",
+            "smooth_z__res__feat__No.1 Exh.Gas Temp.",
+            "smooth_z__res__feat__No.2 Exh.Gas Temp.",
+            "smooth_z__res__feat__No.3 Exh.Gas Temp.",
+            "smooth_z__res__feat__Exh.Gas Temp. Turbine In",
+            "smooth_z__res__feat__Exh.Gas Temp. Turbine Out",
+            "smooth_z__res__feat__Cooling Water Temp. Engine Out I",
+            "smooth_z__res__feat__Cooling Water Temp. Engine Out II",
+            "smooth_z__res__feat__Cooling Water Temp. Engine Out III",
+            "smooth_z__res__feat__LO Temp. Engine In",
+            "smooth_z__res__feat__LO Temp. Engine Out",
+            "smooth_z__res__feat__LO Cooling Water Temp. Out",
+            "smooth_z__res__feat__Charge Air IC Air Temp. In",
+            "smooth_z__res__feat__Charge Air IC Air Temp. Out",
+            "smooth_z__res__feat__Charge Air IC Cooling Water Temp. Out",
+            "smooth_z__res__feat__LO Temp. TCH In",
+            "smooth_z__res__feat__LO Temp. TCH Out",
+            "smooth_z__res__feat__LO Circulating Pump Press.",
+            "smooth_z__res__feat__Fuel transfer pump Press.",
+            "smooth_z__res__feat__Fresh Cooling Water Press.",
+            "smooth_z__res__feat__Sea Cooling Water Press.",
+            "smooth_z__res__feat__TCH LO pump Press.",
+            "smooth_z__res__feat__Fuel Injector Cooling Oil Press.",
+            "smooth_z__res__feat__Engine Cooling water flow",
+            "smooth_z__res__feat__LO Cooling water flow",
+            "smooth_z__res__feat__Charge Air IC Cooling water flow",
+            "smooth_z__res__feat__TCH LO Cooling water flow",
+            "smooth_z__sym__pmax1_dev",
+            "smooth_z__sym__pmax2_dev",
+            "smooth_z__sym__pmax3_dev",
+            "smooth_z__sym__pmax_max_abs_dev",
+            "smooth_z__sym__pmax_min_dev",
+            "smooth_z__sym__egt1_dev",
+            "smooth_z__sym__egt2_dev",
+            "smooth_z__sym__egt3_dev",
+            "smooth_z__sym__egt_max_abs_dev",
+            "smooth_z__sym__egt_min_dev",
+            "smooth_z__therm__ic_air_drop",
+            "smooth_z__therm__ic_approach_temp",
+            "smooth_z__therm__ic_water_rise",
+            "smooth_z__therm__turbine_temp_drop",
+            "smooth_z__therm__turb_in_minus_cyl_egt",
+            "roll_std_z__feat__Max. In-Cylinder Press. No.1",
+            "roll_std_z__feat__Min. In-Cylinder Press. No.1",
+            "roll_std_z__feat__Max. In-Cylinder Press. No.2",
+            "roll_std_z__feat__Min. In-Cylinder Press. No.2",
+            "roll_std_z__feat__Max. In-Cylinder Press. No.3",
+            "roll_std_z__feat__Min. In-Cylinder Press. No.3",
+            "roll_std_z__feat__Charge Air Press.",
+            "roll_std_z__feat__Fuel Flow",
+            "roll_std_z__feat__No.1 Exh.Gas Temp.",
+            "roll_std_z__feat__No.2 Exh.Gas Temp.",
+            "roll_std_z__feat__No.3 Exh.Gas Temp.",
+            "roll_std_z__feat__Exh.Gas Temp. Turbine In",
+            "roll_std_z__feat__Exh.Gas Temp. Turbine Out",
+            "roll_std_z__feat__Cooling Water Temp. Engine Out I",
+            "roll_std_z__feat__Cooling Water Temp. Engine Out II",
+            "roll_std_z__feat__Cooling Water Temp. Engine Out III",
+            "roll_std_z__feat__LO Temp. Engine In",
+            "roll_std_z__feat__LO Temp. Engine Out",
+            "roll_std_z__feat__LO Cooling Water Temp. Out",
+            "roll_std_z__feat__Charge Air IC Air Temp. In",
+            "roll_std_z__feat__Charge Air IC Air Temp. Out",
+            "roll_std_z__feat__Charge Air IC Cooling Water Temp. Out",
+            "roll_std_z__feat__LO Temp. TCH In",
+            "roll_std_z__feat__LO Temp. TCH Out",
+            "roll_std_z__feat__LO Circulating Pump Press.",
+            "roll_std_z__feat__Fuel transfer pump Press.",
+            "roll_std_z__feat__Fresh Cooling Water Press.",
+            "roll_std_z__feat__Sea Cooling Water Press.",
+            "roll_std_z__feat__TCH LO pump Press.",
+            "roll_std_z__feat__Fuel Injector Cooling Oil Press.",
+            "roll_std_z__feat__Engine Cooling water flow",
+            "roll_std_z__feat__LO Cooling water flow",
+            "roll_std_z__feat__Charge Air IC Cooling water flow",
+            "roll_std_z__feat__TCH LO Cooling water flow",
+            "norm__feat__Max. In-Cylinder Press. No.1",
+            "norm__feat__Min. In-Cylinder Press. No.1",
+            "norm__feat__Max. In-Cylinder Press. No.2",
+            "norm__feat__Min. In-Cylinder Press. No.2",
+            "norm__feat__Max. In-Cylinder Press. No.3",
+            "norm__feat__Min. In-Cylinder Press. No.3",
+            "norm__feat__Charge Air Press.",
+            "norm__feat__Fuel Flow",
+            "norm__feat__No.1 Exh.Gas Temp.",
+            "norm__feat__No.2 Exh.Gas Temp.",
+            "norm__feat__No.3 Exh.Gas Temp.",
+            "norm__feat__Exh.Gas Temp. Turbine In",
+            "norm__feat__Exh.Gas Temp. Turbine Out",
+            "norm__feat__Cooling Water Temp. Engine Out I",
+            "norm__feat__Cooling Water Temp. Engine Out II",
+            "norm__feat__Cooling Water Temp. Engine Out III",
+            "norm__feat__LO Temp. Engine In",
+            "norm__feat__LO Temp. Engine Out",
+            "norm__feat__LO Cooling Water Temp. Out",
+            "norm__feat__Charge Air IC Air Temp. In",
+            "norm__feat__Charge Air IC Air Temp. Out",
+            "norm__feat__Charge Air IC Cooling Water Temp. Out",
+            "norm__feat__LO Temp. TCH In",
+            "norm__feat__LO Temp. TCH Out",
+            "norm__feat__LO Circulating Pump Press.",
+            "norm__feat__Fuel transfer pump Press.",
+            "norm__feat__Fresh Cooling Water Press.",
+            "norm__feat__Sea Cooling Water Press.",
+            "norm__feat__TCH LO pump Press.",
+            "norm__feat__Fuel Injector Cooling Oil Press.",
+            "norm__feat__Engine Cooling water flow",
+            "norm__feat__LO Cooling water flow",
+            "norm__feat__Charge Air IC Cooling water flow",
+            "norm__feat__TCH LO Cooling water flow"
+          ],
+          "expected_response_model_type": "Empirical degree-2 polynomial Ridge regression on operating/boundary conditions fitted on training Normal samples only (NOT a validated physical engine model)",
+          "fit_data_sha256": "13a56eca51ca22af281a655b62fd649f88a04ddaae1b0c4dbed1b456c68e33a7",
+          "fit_sample_count": 70711,
+          "fit_normal_sample_count": 39704,
+          "models": {
+            "DummyClassifier": {
+              "model_name": "DummyClassifier (most_frequent)",
+              "accuracy": 0.2767,
+              "macro_f1": 0.0722,
+              "weighted_f1": 0.1199,
+              "false_alarm_rate_on_normal_test": 0.0,
+              "detection_delay_sec_by_run": {
+                "AC_Fouling_60_Load": null,
+                "AC_Fouling_85_Load": null,
+                "AF_Clogging_60_Load": null,
+                "AF_Clogging_85_Load": null,
+                "CW_Pump_Cavitation_85_Load": null,
+                "Clogged_Injector_Nozzle2_LoadProgram": null,
+                "Turbine_Degradation_85_Load": null
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.0722,
+                "macro_f1_ci95_low": 0.0714,
+                "macro_f1_ci95_high": 0.073,
+                "accuracy_ci95_low": 0.2727,
+                "accuracy_ci95_high": 0.2806
+              },
+              "per_class_metrics": {
+                "Normal": {
+                  "precision": 0.2767,
+                  "recall": 1.0,
+                  "f1_score": 0.4334,
+                  "support": 12189
+                },
+                "Air-Cooler Fouling": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 9351
+                },
+                "Compressor Air-Filter Clogging": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 8394
+                },
+                "Injection-Valve Nozzle Clogging": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 6791
+                },
+                "Cooling-Water Pump Cavitation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 4709
+                },
+                "Turbine Degradation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 2625
+                }
+              },
+              "confusion_matrix_labels": [
+                "Normal",
+                "Air-Cooler Fouling",
+                "Compressor Air-Filter Clogging",
+                "Injection-Valve Nozzle Clogging",
+                "Cooling-Water Pump Cavitation",
+                "Turbine Degradation"
+              ],
+              "confusion_matrix": [
+                [
+                  12189,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  9351,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  8394,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  6791,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  4709,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  2625,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            },
+            "LogisticRegression": {
+              "model_name": "LogisticRegression (balanced, L2)",
+              "accuracy": 0.6282,
+              "macro_f1": 0.6064,
+              "weighted_f1": 0.6175,
+              "false_alarm_rate_on_normal_test": 0.34,
+              "detection_delay_sec_by_run": {
+                "AC_Fouling_60_Load": 0.0,
+                "AC_Fouling_85_Load": 155.0,
+                "AF_Clogging_60_Load": 0.0,
+                "AF_Clogging_85_Load": 3639.0,
+                "CW_Pump_Cavitation_85_Load": 0.0,
+                "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                "Turbine_Degradation_85_Load": 1360.0
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.6064,
+                "macro_f1_ci95_low": 0.6024,
+                "macro_f1_ci95_high": 0.6105,
+                "accuracy_ci95_low": 0.6235,
+                "accuracy_ci95_high": 0.6329
+              },
+              "per_class_metrics": {
+                "Normal": {
+                  "precision": 0.5767,
+                  "recall": 0.66,
+                  "f1_score": 0.6156,
+                  "support": 12189
+                },
+                "Air-Cooler Fouling": {
+                  "precision": 1.0,
+                  "recall": 0.2493,
+                  "f1_score": 0.3991,
+                  "support": 9351
+                },
+                "Compressor Air-Filter Clogging": {
+                  "precision": 0.6851,
+                  "recall": 0.5348,
+                  "f1_score": 0.6007,
+                  "support": 8394
+                },
+                "Injection-Valve Nozzle Clogging": {
+                  "precision": 1.0,
+                  "recall": 0.9997,
+                  "f1_score": 0.9999,
+                  "support": 6791
+                },
+                "Cooling-Water Pump Cavitation": {
+                  "precision": 0.5385,
+                  "recall": 0.9858,
+                  "f1_score": 0.6965,
+                  "support": 4709
+                },
+                "Turbine Degradation": {
+                  "precision": 0.2372,
+                  "recall": 0.5257,
+                  "f1_score": 0.3269,
+                  "support": 2625
+                }
+              },
+              "confusion_matrix_labels": [
+                "Normal",
+                "Air-Cooler Fouling",
+                "Compressor Air-Filter Clogging",
+                "Injection-Valve Nozzle Clogging",
+                "Cooling-Water Pump Cavitation",
+                "Turbine Degradation"
+              ],
+              "confusion_matrix": [
+                [
+                  8045,
+                  0,
+                  1990,
+                  0,
+                  116,
+                  2038
+                ],
+                [
+                  1657,
+                  2331,
+                  0,
+                  0,
+                  3189,
+                  2174
+                ],
+                [
+                  3009,
+                  0,
+                  4489,
+                  0,
+                  673,
+                  223
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  6789,
+                  0,
+                  2
+                ],
+                [
+                  67,
+                  0,
+                  0,
+                  0,
+                  4642,
+                  0
+                ],
+                [
+                  1172,
+                  0,
+                  73,
+                  0,
+                  0,
+                  1380
+                ]
+              ]
+            },
+            "RandomForestClassifier": {
+              "model_name": "RandomForestClassifier (100 trees, max_depth=10)",
+              "accuracy": 0.4447,
+              "macro_f1": 0.2908,
+              "weighted_f1": 0.3222,
+              "false_alarm_rate_on_normal_test": 0.0091,
+              "detection_delay_sec_by_run": {
+                "AC_Fouling_60_Load": 309.0,
+                "AC_Fouling_85_Load": null,
+                "AF_Clogging_60_Load": null,
+                "AF_Clogging_85_Load": null,
+                "CW_Pump_Cavitation_85_Load": 3171.0,
+                "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                "Turbine_Degradation_85_Load": null
+              },
+              "uncertainty_bootstrap_95ci": {
+                "macro_f1_mean": 0.2909,
+                "macro_f1_ci95_low": 0.2886,
+                "macro_f1_ci95_high": 0.2933,
+                "accuracy_ci95_low": 0.4401,
+                "accuracy_ci95_high": 0.4495
+              },
+              "per_class_metrics": {
+                "Normal": {
+                  "precision": 0.333,
+                  "recall": 0.9909,
+                  "f1_score": 0.4984,
+                  "support": 12189
+                },
+                "Air-Cooler Fouling": {
+                  "precision": 1.0,
+                  "recall": 0.0186,
+                  "f1_score": 0.0365,
+                  "support": 9351
+                },
+                "Compressor Air-Filter Clogging": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 8394
+                },
+                "Injection-Valve Nozzle Clogging": {
+                  "precision": 1.0,
+                  "recall": 1.0,
+                  "f1_score": 1.0,
+                  "support": 6791
+                },
+                "Cooling-Water Pump Cavitation": {
+                  "precision": 1.0,
+                  "recall": 0.1172,
+                  "f1_score": 0.2098,
+                  "support": 4709
+                },
+                "Turbine Degradation": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1_score": 0.0,
+                  "support": 2625
+                }
+              },
+              "confusion_matrix_labels": [
+                "Normal",
+                "Air-Cooler Fouling",
+                "Compressor Air-Filter Clogging",
+                "Injection-Valve Nozzle Clogging",
+                "Cooling-Water Pump Cavitation",
+                "Turbine Degradation"
+              ],
+              "confusion_matrix": [
+                [
+                  12078,
+                  0,
+                  0,
+                  0,
+                  0,
+                  111
+                ],
+                [
+                  9020,
+                  174,
+                  0,
+                  0,
+                  0,
+                  157
+                ],
+                [
+                  8394,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  6791,
+                  0,
+                  0
+                ],
+                [
+                  4157,
+                  0,
+                  0,
+                  0,
+                  552,
+                  0
+                ],
+                [
+                  2625,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            }
+          },
+          "anomaly_detection": {
+            "threshold_calibration_provenance": "Thresholds calibrated strictly on held-out training normal validation slice (N_fit_normal=31763, N_val_normal=7941). Locked test set (N_test=44059) was never used for threshold selection.",
+            "detectors": {
+              "IsolationForest_ValCalibrated": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 0.4608,
+                  "validation_normal_far": 0.05,
+                  "test_precision": 0.7801,
+                  "test_recall_true_detection_rate": 0.7727,
+                  "test_missed_fault_rate": 0.2273,
+                  "test_f1_score": 0.7764,
+                  "test_false_alarm_rate_on_normal": 0.5694,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": 211.0,
+                    "AC_Fouling_85_Load": 0.0,
+                    "AF_Clogging_60_Load": 299.0,
+                    "AF_Clogging_85_Load": 0.0,
+                    "CW_Pump_Cavitation_85_Load": 0.0,
+                    "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                    "Turbine_Degradation_85_Load": 14.0
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 0.481,
+                  "validation_normal_far": 0.0101,
+                  "test_precision": 0.7888,
+                  "test_recall_true_detection_rate": 0.7149,
+                  "test_missed_fault_rate": 0.2851,
+                  "test_f1_score": 0.75,
+                  "test_false_alarm_rate_on_normal": 0.5005,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": 853.0,
+                    "AC_Fouling_85_Load": 0.0,
+                    "AF_Clogging_60_Load": 3477.0,
+                    "AF_Clogging_85_Load": 0.0,
+                    "CW_Pump_Cavitation_85_Load": 0.0,
+                    "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                    "Turbine_Degradation_85_Load": 75.0
+                  }
+                }
+              },
+              "RMS_Normalized_Residual_Score": {
+                "val_q95_target_5pct_far": {
+                  "calibrated_threshold": 1.9781,
+                  "validation_normal_far": 0.05,
+                  "test_precision": 0.805,
+                  "test_recall_true_detection_rate": 0.7554,
+                  "test_missed_fault_rate": 0.2446,
+                  "test_f1_score": 0.7794,
+                  "test_false_alarm_rate_on_normal": 0.4783,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": 67.0,
+                    "AC_Fouling_85_Load": 0.0,
+                    "AF_Clogging_60_Load": 42.0,
+                    "AF_Clogging_85_Load": 0.0,
+                    "CW_Pump_Cavitation_85_Load": 0.0,
+                    "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                    "Turbine_Degradation_85_Load": 623.0
+                  }
+                },
+                "val_q99_target_1pct_far": {
+                  "calibrated_threshold": 3.7132,
+                  "validation_normal_far": 0.0101,
+                  "test_precision": 0.8683,
+                  "test_recall_true_detection_rate": 0.5717,
+                  "test_missed_fault_rate": 0.4283,
+                  "test_f1_score": 0.6894,
+                  "test_false_alarm_rate_on_normal": 0.2268,
+                  "detection_delay_sec_by_run": {
+                    "AC_Fouling_60_Load": 4066.0,
+                    "AC_Fouling_85_Load": 0.0,
+                    "AF_Clogging_60_Load": null,
+                    "AF_Clogging_85_Load": 3484.0,
+                    "CW_Pump_Cavitation_85_Load": 0.0,
+                    "Clogged_Injector_Nozzle2_LoadProgram": 0.0,
+                    "Turbine_Degradation_85_Load": 3263.0
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "rul_evaluation": {
+        "status": "NOT_SUPPORTED_NO_GROUND_TRUTH_RUL_LABELS",
+        "reason": "Marine Engine Fault scenarios are controlled fault-severity steps at fixed loads (40%, 60%, 75%, 85%), not run-to-failure life trajectories. Converting fault severity into RUL without a validated wear law is prohibited."
+      }
+    }
+  },
+  "synthetic_rul_reference": {
+    "status": "KEPT_SEPARATE_SYNTHETIC_ONLY",
+    "artifact_path": "backend/artifacts/synthetic_baseline_report.json",
+    "real_data_rul_status": "NOT_SUPPORTED_NO_GROUND_TRUTH_RUL_LABELS"
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "checklist_id": "DRISHTI-PHASE5-RELEASE-CHECKLIST-v1.1",
+  "generated_at_utc": "2026-10-03T11:52:00Z",
+  "project": "SIH26054 - DRISHTI: AI-Enabled Digital Twin for Aero Piston Engine Health Monitoring",
+  "audit_date": "2026-10-03",
+  "contradictory_test_runs_resolved": {
+    "task_830": {
+      "command": "python -m pytest tests/test_phase5_integration.py -v",
+      "exit_code": 1,
+      "passed": 6,
+      "failed": 1,
+      "duration_sec": 200.63,
+      "failure_reason": "Asserted wrong path data/raw/liu_ice_2025/LiU-ICE Benchmark.zip instead of actual repository path data/raw/liu_ice/dxc25liu-ice-main.zip"
+    },
+    "task_840": {
+      "command": "python -m pytest tests/test_phase5_integration.py -v",
+      "exit_code": 0,
+      "passed": 7,
+      "failed": 0,
+      "duration_sec": 48.01,
+      "resolution": "Updated test_phase5_integration.py to verify actual repository paths and SHA-256 hashes via RealDatasetIngestor().verify_raw_archives()"
+    },
+    "task_856_full_suite": {
+      "command": "python -m pytest tests/ -v",
+      "exit_code": 0,
+      "collected": 36,
+      "passed": 36,
+      "failed": 0,
+      "warnings": 2,
+      "duration_sec": 171.26
+    }
+  },
+  "raw_dataset_archives_verified": {
+    "liu_ice": {
+      "actual_path": "data/raw/liu_ice/dxc25liu-ice-main.zip",
+      "size_bytes": 17814194,
+      "sha256": "2861857c5c9e2d952ea2ad99ddc3699a4435bd17fc4f169265ec4664438b3e24",
+      "verified": true
+    },
+    "marine_engine_fault": {
+      "actual_path": "data/raw/marine_engine_fault/Marine_Engine_Fault_Data_v1.zip",
+      "size_bytes": 26538633,
+      "sha256": "3fba7aa0c288ae1bc05383fb54bf67cbde209d61b26e3e811d4bc2f22f97442b",
+      "verified": true
+    }
+  },
+  "phase5_deliverables_verified": {
+    "docs/PHASE5_RELEASE_AUDIT.md": true,
+    "docs/PHASE5_END_TO_END_TEST_REPORT.md": true,
+    "backend/artifacts/phase5_release_checklist.json": true,
+    "tests/test_phase5_integration.py": true,
+    "requirements.txt": true
+  },
+  "frontend_build": {
+    "task_id": "task-747",
+    "command": "npm run build",
+    "exit_code": 0,
+    "typescript_errors": 0,
+    "modules_transformed": 2958,
+    "dist_index_html": "frontend/dist/index.html"
+  },
+  "evidence_separation": {
+    "automated_pytest_tests": "36 passed, 0 failed, exit code 0 (task-856)",
+    "live_http_api_checks": "21/23 passed in task-759; remaining 2 (POST /api/predict enum SIMULATOR and isolated POST /api/simulations Normal in 4.5s) verified in follow-up live HTTP calls",
+    "static_build_and_code_audit": "Verified via tsc && vite build (exit code 0) and route/schema inspection",
+    "interactive_browser_testing": "NOT_VERIFIED (headless browser unavailable in CLI environment)",
+    "clean_machine_venv_install": "NOT_VERIFIED (requirements.txt generated; fresh clean-machine install not executed)"
+  },
+  "release_decision": {
+    "full_suite_test_count": 36,
+    "full_suite_failures": 0,
+    "full_suite_exit_code": 0,
+    "demo_ready": true,
+    "software_release_ready": true,
+    "interactive_browser_testing_completed": false,
+    "real_uav_flight_ready": false,
+    "real_uav_flight_ready_statement": "Not established unless independently validated on the target MALE UAV aero piston engine.",
+    "remaining_blockers": [
+      "Interactive browser click-through verification on target presentation machine",
+      "Clean-environment virtualenv installation test from requirements.txt on a separate host",
+      "Target MALE UAV aero piston engine test-cell and flight validation (required before any real UAV deployment)",
+      "Physical SocketCAN / FADEC bus hardware-in-the-loop verification"
+    ]
+  }
+}

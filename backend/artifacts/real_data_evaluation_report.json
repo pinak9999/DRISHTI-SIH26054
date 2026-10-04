@@ -1,0 +1,750 @@
+{
+  "report_version": "DRISHTI-RealDataEvaluation-v1.0",
+  "generated_at": "2026-10-03",
+  "evaluation_scope": "REAL_EXPERIMENTAL_BENCH_DATA_ONLY",
+  "domain_transfer_disclaimer": "NON-EQUIVALENCE NOTICE: Results in this report are computed on real experimental test-bench data from (1) a 4-cylinder turbocharged automotive SI engine (LiU-ICE) and (2) a 3-cylinder 257 kW turbocharged marine diesel engine (Matsui MU323DGSC). They validate DRISHTI's ingestion, anomaly detection, and fault classification pipeline mechanics on real noisy measurements, but do NOT constitute validation on a MALE UAV aero-piston engine (Rotax 914 class) or validate RUL estimation.",
+  "synthetic_baseline_reference": {
+    "report_path": "backend/artifacts/synthetic_baseline_report.json",
+    "scope": "SYNTHETIC-ONLY",
+    "macro_f1_synthetic": 0.9769
+  },
+  "datasets_evaluated": {
+    "LiU-ICE-Benchmark-DXC25": {
+      "dataset_id": "LiU-ICE-Benchmark-DXC25",
+      "provenance": {
+        "source_archive": "data/raw/liu_ice/dxc25liu-ice-main.zip",
+        "doi": "10.48550/arXiv.2408.13269",
+        "data_type": "REAL_MEASURED_TEST_BENCH",
+        "engine_type": "4-cylinder turbocharged spark-ignition automotive piston engine",
+        "sampling_rate_hz": 20.0,
+        "evaluation_subsample_stride": 5,
+        "effective_eval_rate_hz": 4.0
+      },
+      "split_manifest": {
+        "dataset_id": "LiU-ICE-Benchmark-DXC25",
+        "split_strategy": "Run-aware WLTP driving-cycle split across distinct fault magnitudes (with 100s guard buffer on single NF baseline run)",
+        "physical_engines_total": 1,
+        "train_runs": [
+          "wltp_NF_train_block",
+          "wltp_f_pic_090",
+          "wltp_f_pim_080",
+          "wltp_f_waf_105"
+        ],
+        "test_runs": [
+          "wltp_NF_test_block",
+          "wltp_f_pic_110",
+          "wltp_f_pim_090",
+          "wltp_f_waf_110"
+        ],
+        "excluded_single_realization_runs": [
+          "wltp_f_iml_6mm (only 1 run exists in DXC25 archive; excluded from strict cross-run multi-class split to avoid intra-run leakage)"
+        ],
+        "shared_run_ids_between_train_and_test": 0,
+        "train_samples": 125265,
+        "test_samples": 125346,
+        "Evaluated_Classes": [
+          "NF",
+          "f_pic",
+          "f_pim",
+          "f_waf"
+        ]
+      },
+      "anomaly_detection_evaluation": {
+        "model_name": "IsolationForest (fit on nominal NF training samples only)",
+        "precision": 0.8637,
+        "recall_true_detection_rate": 0.3569,
+        "f1_score": 0.5051,
+        "false_alarm_rate": 0.2347,
+        "engineering_interpretation": "Without a calibrated nonlinear mean-value air-path observer, raw air-path signals across transient WLTP driving cycles vary by >300% due to throttle/RPM dynamics, whereas sensor gain faults are only 5%-20%. Consequently, raw-signal IsolationForest exhibits low sensitivity to small multiplicative sensor faults during rapid transients."
+      },
+      "fault_isolation_evaluation": {
+        "evaluated_classes": [
+          "NF",
+          "f_pic",
+          "f_pim",
+          "f_waf"
+        ],
+        "baseline_dummy": {
+          "model_name": "DummyClassifier (Most Frequent Baseline)",
+          "accuracy": 0.269,
+          "macro_f1": 0.106,
+          "weighted_f1": 0.114,
+          "uncertainty_bootstrap_95ci": {
+            "macro_f1_mean": 0.1059,
+            "macro_f1_ci95_low": 0.1037,
+            "macro_f1_ci95_high": 0.1075,
+            "accuracy_ci95_low": 0.2618,
+            "accuracy_ci95_high": 0.2739
+          },
+          "per_class_metrics": {
+            "NF": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 4854
+            },
+            "f_pic": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 6745
+            },
+            "f_pim": {
+              "precision": 0.269,
+              "recall": 1.0,
+              "f1_score": 0.424,
+              "support": 6744
+            },
+            "f_waf": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 6727
+            }
+          },
+          "confusion_matrix_labels": [
+            "NF",
+            "f_pic",
+            "f_pim",
+            "f_waf"
+          ],
+          "confusion_matrix": [
+            [
+              0,
+              0,
+              4854,
+              0
+            ],
+            [
+              0,
+              0,
+              6745,
+              0
+            ],
+            [
+              0,
+              0,
+              6744,
+              0
+            ],
+            [
+              0,
+              0,
+              6727,
+              0
+            ]
+          ]
+        },
+        "baseline_logistic_regression": {
+          "model_name": "LogisticRegression (Linear Baseline)",
+          "accuracy": 0.4314,
+          "macro_f1": 0.345,
+          "weighted_f1": 0.3421,
+          "uncertainty_bootstrap_95ci": {
+            "macro_f1_mean": 0.3451,
+            "macro_f1_ci95_low": 0.3425,
+            "macro_f1_ci95_high": 0.3473,
+            "accuracy_ci95_low": 0.4252,
+            "accuracy_ci95_high": 0.4362
+          },
+          "per_class_metrics": {
+            "NF": {
+              "precision": 0.2525,
+              "recall": 0.8189,
+              "f1_score": 0.386,
+              "support": 4854
+            },
+            "f_pic": {
+              "precision": 0.0768,
+              "recall": 0.0211,
+              "f1_score": 0.033,
+              "support": 6745
+            },
+            "f_pim": {
+              "precision": 0.9305,
+              "recall": 0.993,
+              "f1_score": 0.9608,
+              "support": 6744
+            },
+            "f_waf": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 6727
+            }
+          },
+          "confusion_matrix_labels": [
+            "NF",
+            "f_pic",
+            "f_pim",
+            "f_waf"
+          ],
+          "confusion_matrix": [
+            [
+              3975,
+              421,
+              458,
+              0
+            ],
+            [
+              6320,
+              142,
+              0,
+              283
+            ],
+            [
+              38,
+              9,
+              6697,
+              0
+            ],
+            [
+              5408,
+              1277,
+              42,
+              0
+            ]
+          ]
+        },
+        "random_forest_classifier": {
+          "model_name": "RandomForestClassifier (80 trees, max_depth=12)",
+          "accuracy": 0.5925,
+          "macro_f1": 0.5065,
+          "weighted_f1": 0.5165,
+          "uncertainty_bootstrap_95ci": {
+            "macro_f1_mean": 0.5064,
+            "macro_f1_ci95_low": 0.5028,
+            "macro_f1_ci95_high": 0.5104,
+            "accuracy_ci95_low": 0.5868,
+            "accuracy_ci95_high": 0.5982
+          },
+          "per_class_metrics": {
+            "NF": {
+              "precision": 0.3057,
+              "recall": 0.4957,
+              "f1_score": 0.3782,
+              "support": 4854
+            },
+            "f_pic": {
+              "precision": 0.5717,
+              "recall": 0.8455,
+              "f1_score": 0.6822,
+              "support": 6745
+            },
+            "f_pim": {
+              "precision": 0.9336,
+              "recall": 1.0,
+              "f1_score": 0.9656,
+              "support": 6744
+            },
+            "f_waf": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 6727
+            }
+          },
+          "confusion_matrix_labels": [
+            "NF",
+            "f_pic",
+            "f_pim",
+            "f_waf"
+          ],
+          "confusion_matrix": [
+            [
+              2406,
+              1968,
+              480,
+              0
+            ],
+            [
+              1042,
+              5703,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              6744,
+              0
+            ],
+            [
+              4423,
+              2304,
+              0,
+              0
+            ]
+          ]
+        },
+        "engineering_interpretation": "CRITICAL SCIENTIFIC FINDING: In LiU-ICE, training run `wltp_f_pic_090` has a -10% intercooler pressure sensor gain fault (0.90x), whereas held-out test run `wltp_f_pic_110` has an opposite-sign +10% gain fault (1.10x). Purely data-driven classifiers trained only on negative-gain sensor faults fail to generalize to positive-gain faults on the same sensor (`f_pic` recall near 0), whereas same-sign faults (`f_pim` -20% -> -10% and `f_waf` +5% -> +10%) show partial transfer. This directly validates the thesis of Jung et al. (arXiv:2408.13269) that physics-based structural residuals are essential when training fault realizations are incomplete."
+      },
+      "rul_evaluation": {
+        "status": "NOT_SUPPORTED_NO_GROUND_TRUTH_RUL_LABELS",
+        "reason": "LiU-ICE injects step sensor and orifice-leakage faults at t=120s during 30-minute WLTP cycles. No run-to-failure degradation trajectories or RUL ground-truth labels exist."
+      }
+    },
+    "Marine-Engine-Fault-v1.0": {
+      "dataset_id": "Marine-Engine-Fault-v1.0",
+      "provenance": {
+        "source_archive": "data/raw/marine_engine_fault/Marine_Engine_Fault_Data_v1.zip",
+        "doi": "10.5281/zenodo.19857425",
+        "preprint_doi": "10.48550/arXiv.2607.19444",
+        "license": "CC-BY-4.0",
+        "data_type": "REAL_MEASURED_TEST_BENCH",
+        "engine_type": "Matsui Iron Works MU323DGSC 3-cylinder turbocharged marine diesel piston engine (257 kW)",
+        "sampling_rate_hz": 0.5,
+        "feature_channel_count": 44,
+        "excluded_sparse_channels": [
+          "Compressor Filter Loss",
+          "Turbine Back Pressure"
+        ]
+      },
+      "split_manifest": {
+        "dataset_id": "Marine-Engine-Fault-v1.0",
+        "split_strategy": "Strict file/run-level split across distinct engine load conditions (zero shared CSV runs)",
+        "physical_engines_total": 1,
+        "train_runs": [
+          "Reference_Data",
+          "AC_Fouling_40_Load",
+          "AC_Fouling_75_Load",
+          "AF_Clogging_40_Load",
+          "AF_Clogging_75_Load",
+          "Clogged_Injector_Nozzle1_40_60_85_Load",
+          "CW_Pump_Cavitation_60_Load",
+          "Turbine_Degradation_40_Load",
+          "Turbine_Degradation_60_Load"
+        ],
+        "test_runs": [
+          "AC_Fouling_60_Load",
+          "AC_Fouling_85_Load",
+          "AF_Clogging_60_Load",
+          "AF_Clogging_85_Load",
+          "Clogged_Injector_Nozzle2_LoadProgram",
+          "CW_Pump_Cavitation_85_Load",
+          "Turbine_Degradation_85_Load"
+        ],
+        "shared_run_ids_between_train_and_test": 0,
+        "train_samples": 70711,
+        "test_samples": 44059,
+        "train_class_distribution": {
+          "Normal": 39704,
+          "Air-Cooler Fouling": 8149,
+          "Compressor Air-Filter Clogging": 6680,
+          "Injection-Valve Nozzle Clogging": 6492,
+          "Turbine Degradation": 5221,
+          "Cooling-Water Pump Cavitation": 4465
+        },
+        "test_class_distribution": {
+          "Normal": 12189,
+          "Air-Cooler Fouling": 9351,
+          "Compressor Air-Filter Clogging": 8394,
+          "Injection-Valve Nozzle Clogging": 6791,
+          "Cooling-Water Pump Cavitation": 4709,
+          "Turbine Degradation": 2625
+        }
+      },
+      "anomaly_detection_evaluation": {
+        "model_name": "IsolationForest (80 trees, fit on normal training samples only)",
+        "precision": 0.9908,
+        "recall_true_detection_rate": 0.0407,
+        "f1_score": 0.0781,
+        "false_alarm_rate": 0.001,
+        "detection_delay_sec_by_heldout_run": {
+          "AC_Fouling_60_Load": null,
+          "AC_Fouling_85_Load": 2124.0,
+          "AF_Clogging_60_Load": null,
+          "AF_Clogging_85_Load": 614.0,
+          "CW_Pump_Cavitation_85_Load": null,
+          "Clogged_Injector_Nozzle2_LoadProgram": null,
+          "Turbine_Degradation_85_Load": null
+        }
+      },
+      "fault_classification_evaluation": {
+        "evaluated_classes": [
+          "Normal",
+          "Air-Cooler Fouling",
+          "Compressor Air-Filter Clogging",
+          "Injection-Valve Nozzle Clogging",
+          "Cooling-Water Pump Cavitation",
+          "Turbine Degradation"
+        ],
+        "baseline_dummy": {
+          "model_name": "DummyClassifier (Most Frequent Baseline)",
+          "accuracy": 0.2767,
+          "macro_f1": 0.0722,
+          "weighted_f1": 0.1199,
+          "uncertainty_bootstrap_95ci": {
+            "macro_f1_mean": 0.0722,
+            "macro_f1_ci95_low": 0.0714,
+            "macro_f1_ci95_high": 0.073,
+            "accuracy_ci95_low": 0.2727,
+            "accuracy_ci95_high": 0.2806
+          },
+          "per_class_metrics": {
+            "Normal": {
+              "precision": 0.2767,
+              "recall": 1.0,
+              "f1_score": 0.4334,
+              "support": 12189
+            },
+            "Air-Cooler Fouling": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 9351
+            },
+            "Compressor Air-Filter Clogging": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 8394
+            },
+            "Injection-Valve Nozzle Clogging": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 6791
+            },
+            "Cooling-Water Pump Cavitation": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 4709
+            },
+            "Turbine Degradation": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 2625
+            }
+          },
+          "confusion_matrix_labels": [
+            "Normal",
+            "Air-Cooler Fouling",
+            "Compressor Air-Filter Clogging",
+            "Injection-Valve Nozzle Clogging",
+            "Cooling-Water Pump Cavitation",
+            "Turbine Degradation"
+          ],
+          "confusion_matrix": [
+            [
+              12189,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              9351,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              8394,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              6791,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4709,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              2625,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        "baseline_logistic_regression": {
+          "model_name": "LogisticRegression (Linear Baseline, 44 channels)",
+          "accuracy": 0.3603,
+          "macro_f1": 0.2569,
+          "weighted_f1": 0.3147,
+          "uncertainty_bootstrap_95ci": {
+            "macro_f1_mean": 0.257,
+            "macro_f1_ci95_low": 0.2543,
+            "macro_f1_ci95_high": 0.2599,
+            "accuracy_ci95_low": 0.3562,
+            "accuracy_ci95_high": 0.3643
+          },
+          "per_class_metrics": {
+            "Normal": {
+              "precision": 0.3812,
+              "recall": 0.8193,
+              "f1_score": 0.5203,
+              "support": 12189
+            },
+            "Air-Cooler Fouling": {
+              "precision": 1.0,
+              "recall": 0.1746,
+              "f1_score": 0.2973,
+              "support": 9351
+            },
+            "Compressor Air-Filter Clogging": {
+              "precision": 0.0219,
+              "recall": 0.0004,
+              "f1_score": 0.0007,
+              "support": 8394
+            },
+            "Injection-Valve Nozzle Clogging": {
+              "precision": 0.8041,
+              "recall": 0.5906,
+              "f1_score": 0.681,
+              "support": 6791
+            },
+            "Cooling-Water Pump Cavitation": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 4709
+            },
+            "Turbine Degradation": {
+              "precision": 0.0273,
+              "recall": 0.0918,
+              "f1_score": 0.042,
+              "support": 2625
+            }
+          },
+          "confusion_matrix_labels": [
+            "Normal",
+            "Air-Cooler Fouling",
+            "Compressor Air-Filter Clogging",
+            "Injection-Valve Nozzle Clogging",
+            "Cooling-Water Pump Cavitation",
+            "Turbine Degradation"
+          ],
+          "confusion_matrix": [
+            [
+              9986,
+              0,
+              128,
+              0,
+              0,
+              2075
+            ],
+            [
+              5952,
+              1633,
+              0,
+              0,
+              0,
+              1766
+            ],
+            [
+              2693,
+              0,
+              3,
+              977,
+              0,
+              4721
+            ],
+            [
+              471,
+              0,
+              6,
+              4011,
+              2267,
+              36
+            ],
+            [
+              4709,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              2384,
+              0,
+              0,
+              0,
+              0,
+              241
+            ]
+          ]
+        },
+        "random_forest_classifier": {
+          "model_name": "RandomForestClassifier (80 trees, max_depth=12, 44 channels)",
+          "accuracy": 0.2615,
+          "macro_f1": 0.1166,
+          "weighted_f1": 0.1564,
+          "uncertainty_bootstrap_95ci": {
+            "macro_f1_mean": 0.1166,
+            "macro_f1_ci95_low": 0.1148,
+            "macro_f1_ci95_high": 0.1183,
+            "accuracy_ci95_low": 0.2578,
+            "accuracy_ci95_high": 0.2654
+          },
+          "per_class_metrics": {
+            "Normal": {
+              "precision": 0.2707,
+              "recall": 0.7449,
+              "f1_score": 0.3971,
+              "support": 12189
+            },
+            "Air-Cooler Fouling": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 9351
+            },
+            "Compressor Air-Filter Clogging": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 8394
+            },
+            "Injection-Valve Nozzle Clogging": {
+              "precision": 0.2606,
+              "recall": 0.3596,
+              "f1_score": 0.3022,
+              "support": 6791
+            },
+            "Cooling-Water Pump Cavitation": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 4709
+            },
+            "Turbine Degradation": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1_score": 0.0,
+              "support": 2625
+            }
+          },
+          "confusion_matrix_labels": [
+            "Normal",
+            "Air-Cooler Fouling",
+            "Compressor Air-Filter Clogging",
+            "Injection-Valve Nozzle Clogging",
+            "Cooling-Water Pump Cavitation",
+            "Turbine Degradation"
+          ],
+          "confusion_matrix": [
+            [
+              9080,
+              0,
+              0,
+              2737,
+              0,
+              372
+            ],
+            [
+              9333,
+              0,
+              0,
+              0,
+              0,
+              18
+            ],
+            [
+              4204,
+              0,
+              0,
+              4190,
+              0,
+              0
+            ],
+            [
+              3594,
+              0,
+              0,
+              2442,
+              755,
+              0
+            ],
+            [
+              4709,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              2625,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        "top_10_rf_feature_importances": [
+          {
+            "channel": "Fuel Flow",
+            "importance": 0.0883
+          },
+          {
+            "channel": "Fuel Oil Temp. Flow meter In",
+            "importance": 0.0818
+          },
+          {
+            "channel": "LO Cooling Water Temp. In",
+            "importance": 0.0774
+          },
+          {
+            "channel": "Fuel transfer pump Press.",
+            "importance": 0.0712
+          },
+          {
+            "channel": "Charge Air IC Cooling Water Temp. In",
+            "importance": 0.0648
+          },
+          {
+            "channel": "Fuel Temp.",
+            "importance": 0.0595
+          },
+          {
+            "channel": "Engine Cooling water flow",
+            "importance": 0.0587
+          },
+          {
+            "channel": "Sea Cooling Water Press.",
+            "importance": 0.0558
+          },
+          {
+            "channel": "TCH LO pump Press.",
+            "importance": 0.0538
+          },
+          {
+            "channel": "Engine Speed",
+            "importance": 0.0362
+          }
+        ],
+        "engineering_interpretation": "When evaluated strictly on held-out load runs (60% and 85% load runs unseen during training on 40% and 75% load runs), multi-class generalization is substantially harder than within-run random splitting because raw thermal/pressure levels shift strongly with engine load (40% vs 85% load). This demonstrates why honest run/load-level splitting is essential to avoid inflated accuracy claims."
+      },
+      "rul_evaluation": {
+        "status": "NOT_SUPPORTED_NO_GROUND_TRUTH_RUL_LABELS",
+        "reason": "Marine Engine Fault scenarios were physically induced at fixed loads (40%, 60%, 75%, 85%) rather than run-to-failure life depletion. Manufacturing RUL targets is prohibited."
+      }
+    }
+  },
+  "quality_report_path": "data/processed/real_data_quality_report.json"
+}

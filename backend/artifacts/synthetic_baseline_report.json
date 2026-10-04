@@ -1,0 +1,354 @@
+{
+  "model_version": "DRISHTI-ML-Ensemble-v1.0",
+  "xgboost_fallback_note": "xgboost is not installed in the host environment; using scikit-learn RandomForestClassifier, IsolationForest, and RandomForestRegressor with ensemble percentile intervals.",
+  "feature_names": [
+    "cht_residual_c",
+    "egt_residual_c",
+    "oil_pressure_residual_bar",
+    "oil_temp_residual_c",
+    "fuel_flow_residual_lph",
+    "vibration_residual_mms",
+    "injection_pulse_residual_ms",
+    "cht_rolling_slope_c_per_s",
+    "oil_pressure_rolling_slope_bar_per_s",
+    "vibration_rolling_slope_mms_per_s",
+    "cht_rolling_std_c",
+    "vibration_rolling_std_mms",
+    "thermal_to_egt_ratio",
+    "oil_press_to_rpm_ratio",
+    "fuel_to_pulse_ratio",
+    "quality_score",
+    "invalid_or_missing_channel_count"
+  ],
+  "feature_importances": {
+    "cht_residual_c": 0.1236,
+    "egt_residual_c": 0.1465,
+    "oil_pressure_residual_bar": 0.0796,
+    "oil_temp_residual_c": 0.1101,
+    "fuel_flow_residual_lph": 0.129,
+    "vibration_residual_mms": 0.0919,
+    "injection_pulse_residual_ms": 0.0665,
+    "cht_rolling_slope_c_per_s": 0.0083,
+    "oil_pressure_rolling_slope_bar_per_s": 0.0089,
+    "vibration_rolling_slope_mms_per_s": 0.0102,
+    "cht_rolling_std_c": 0.0132,
+    "vibration_rolling_std_mms": 0.0176,
+    "thermal_to_egt_ratio": 0.0396,
+    "oil_press_to_rpm_ratio": 0.0764,
+    "fuel_to_pulse_ratio": 0.0665,
+    "quality_score": 0.0059,
+    "invalid_or_missing_channel_count": 0.0061
+  },
+  "dataset_manifest": {
+    "dataset_version": "DRISHTI-SynthCorpus-v1.0",
+    "is_synthetic": true,
+    "base_seed": 1000,
+    "train_trajectories": 36,
+    "test_trajectories": 18,
+    "train_samples": 1296,
+    "test_samples": 648,
+    "shared_engines_between_train_and_test": 0,
+    "classes": [
+      "Normal",
+      "Cylinder Overheating",
+      "Oil Pressure Drop",
+      "Crankshaft Bearing Wear",
+      "Cylinder Misfire",
+      "Sensor Fault",
+      "Piston Ring Wear",
+      "Valve Clearance Issue",
+      "Fuel Injector Clogging"
+    ],
+    "rul_target_unit": "hours",
+    "rul_definition": "Remaining operating hours until composite thermal/oil/vibration degradation reaches critical maintenance threshold D(t)=1.0."
+  },
+  "classification_metrics": {
+    "overall_accuracy": 0.9738,
+    "macro_f1": 0.9769,
+    "classes": [
+      "Normal",
+      "Cylinder Overheating",
+      "Oil Pressure Drop",
+      "Crankshaft Bearing Wear",
+      "Cylinder Misfire",
+      "Sensor Fault",
+      "Piston Ring Wear",
+      "Valve Clearance Issue",
+      "Fuel Injector Clogging"
+    ],
+    "per_class": {
+      "Normal": {
+        "precision": 0.9171,
+        "recall": 0.9881,
+        "f1": 0.9513,
+        "support": 168
+      },
+      "Cylinder Overheating": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 60
+      },
+      "Oil Pressure Drop": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 60
+      },
+      "Crankshaft Bearing Wear": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 60
+      },
+      "Cylinder Misfire": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 60
+      },
+      "Sensor Fault": {
+        "precision": 0.9574,
+        "recall": 0.75,
+        "f1": 0.8411,
+        "support": 60
+      },
+      "Piston Ring Wear": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 60
+      },
+      "Valve Clearance Issue": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 60
+      },
+      "Fuel Injector Clogging": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 60
+      }
+    },
+    "confusion_matrix": [
+      [
+        166,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        60,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        60,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        60,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        60,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        15,
+        0,
+        0,
+        0,
+        0,
+        45,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        60,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        60,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        60
+      ]
+    ]
+  },
+  "anomaly_detection_metrics": {
+    "model_type": "IsolationForest",
+    "calibrated_threshold": -0.0274,
+    "recall": 0.8875,
+    "false_alarm_rate": 0.0119,
+    "precision": 0.9953,
+    "pr_curve": [
+      {
+        "recall": 1.0,
+        "precision": 0.7407,
+        "threshold": -0.1769
+      },
+      {
+        "recall": 0.9812,
+        "precision": 0.7785,
+        "threshold": -0.142
+      },
+      {
+        "recall": 0.9625,
+        "precision": 0.8221,
+        "threshold": -0.1222
+      },
+      {
+        "recall": 0.95,
+        "precision": 0.8786,
+        "threshold": -0.0993
+      },
+      {
+        "recall": 0.9375,
+        "precision": 0.9454,
+        "threshold": -0.0692
+      },
+      {
+        "recall": 0.8958,
+        "precision": 0.9931,
+        "threshold": -0.0305
+      },
+      {
+        "recall": 0.8125,
+        "precision": 1.0,
+        "threshold": -0.0016
+      },
+      {
+        "recall": 0.7229,
+        "precision": 1.0,
+        "threshold": 0.0132
+      },
+      {
+        "recall": 0.6333,
+        "precision": 1.0,
+        "threshold": 0.0309
+      },
+      {
+        "recall": 0.5437,
+        "precision": 1.0,
+        "threshold": 0.0453
+      },
+      {
+        "recall": 0.4542,
+        "precision": 1.0,
+        "threshold": 0.0559
+      },
+      {
+        "recall": 0.3646,
+        "precision": 1.0,
+        "threshold": 0.0647
+      },
+      {
+        "recall": 0.275,
+        "precision": 1.0,
+        "threshold": 0.0776
+      },
+      {
+        "recall": 0.1854,
+        "precision": 1.0,
+        "threshold": 0.0904
+      },
+      {
+        "recall": 0.0958,
+        "precision": 1.0,
+        "threshold": 0.1107
+      },
+      {
+        "recall": 0.0063,
+        "precision": 1.0,
+        "threshold": 0.1621
+      }
+    ]
+  },
+  "sensor_fault_isolation_metrics": {
+    "isolator_version": "SensorFaultIsolator-v1.0",
+    "precision": 0.8444,
+    "recall": 0.6333,
+    "true_positives": 38,
+    "false_positives": 7,
+    "false_negatives": 22
+  },
+  "rul_estimation_metrics": {
+    "model_type": "RandomForestRegressor (40 trees, empirical 10th-90th percentile uncertainty)",
+    "target_unit": "hours",
+    "held_out_mae_hours": 2.805,
+    "held_out_rmse_hours": 4.193,
+    "evaluated_samples": 588,
+    "target_provenance": "SYNTHETIC-ONLY linear countdown ramp defined in mission_profiles.py (not real run-to-failure wear)."
+  },
+  "health_indicator_config": {
+    "weights": {
+      "thermal_penalty_weight": 0.3,
+      "oil_penalty_weight": 0.3,
+      "vibration_penalty_weight": 0.25,
+      "anomaly_penalty_weight": 0.15
+    },
+    "formula": "HI = clip(100 - (0.30*P_thermal + 0.30*P_oil + 0.25*P_vib + 0.15*P_anom), 0, 100)",
+    "disclosure": "Composite engineering health index; not a calibrated probability of failure."
+  },
+  "evaluation_scope": "SYNTHETIC-ONLY",
+  "data_provenance_warning": "SYNTHETIC-ONLY: All training (1,296 samples) and test (648 samples) records in this report were generated by DRISHTI's deterministic algebraic fault simulator (DRISHTI-SynthCorpus-v1.0). Metrics reflect software pipeline verification on synthetic residuals, NOT real-engine validation."
+}

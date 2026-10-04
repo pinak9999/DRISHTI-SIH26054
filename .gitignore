@@ -1,0 +1,35 @@
+﻿# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Node.js
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Build and cache
+dist/
+build/
+.cache/
+.pytest_cache/
+.mypy_cache/
+*.log
+
+# Local IDE files
+.vscode/
+.idea/
+
+# Large datasets: upload separately after size check
+data/
+
+# Model backups and local database
+backend/artifacts/backups/
+backend/artifacts/*.db
