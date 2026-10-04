@@ -335,9 +335,9 @@ function getSubsystemColor(
   isSelected: boolean,
   baseHex: string
 ): string {
-  if (status === 'CRITICAL') return '#ef4444';
-  if (status === 'WARNING') return '#f59e0b';
-  if (isSelected) return '#38bdf8';
+  if (status === 'CRITICAL') return '#b91c1c';
+  if (status === 'WARNING') return '#d97706';
+  if (isSelected) return '#36d9ff';
   return baseHex;
 }
 
@@ -345,9 +345,9 @@ function getSubsystemEmissive(
   status: ComponentHealthState,
   isSelected: boolean
 ): string {
-  if (status === 'CRITICAL') return '#7f1d1d';
-  if (status === 'WARNING') return '#78350f';
-  if (isSelected) return '#0c4a6e';
+  if (status === 'CRITICAL') return '#58111a';
+  if (status === 'WARNING') return '#451a03';
+  if (isSelected) return '#083344';
   return '#000000';
 }
 
@@ -553,41 +553,87 @@ const ProceduralAeroEngineScene: React.FC<{
       >
         {/* Port Cylinder Heads */}
         {[-0.62, 0.62].map((zOff, idx) => (
-          <mesh
-            key={`p-head-${idx}`}
-            position={[-1.62 - 1.45 * e, 0.05, zOff]}
-          >
-            <boxGeometry args={[0.36, 0.76, 0.76]} />
-            <meshStandardMaterial {...matProps('cylinder_heads_valves', '#38bdf8', 0.55, 0.35)} />
-          </mesh>
+          <group key={`p-head-${idx}`} position={[-1.62 - 1.45 * e, 0.05, zOff]}>
+            <mesh>
+              <boxGeometry args={[0.36, 0.74, 0.74]} />
+              <meshStandardMaterial {...matProps('cylinder_heads_valves', '#526075', 0.65, 0.3)} />
+            </mesh>
+            {/* Valvetrain cover bevel */}
+            <mesh position={[-0.19, 0, 0]}>
+              <boxGeometry args={[0.06, 0.62, 0.62]} />
+              <meshStandardMaterial {...matProps('cylinder_heads_valves', '#334155', 0.7, 0.3)} />
+            </mesh>
+            {/* Dual Spark Plug Boots */}
+            <mesh position={[-0.08, 0.38, 0.15]}>
+              <cylinderGeometry args={[0.035, 0.035, 0.14, 12]} />
+              <meshStandardMaterial color="#1e293b" roughness={0.7} />
+            </mesh>
+            <mesh position={[-0.08, 0.38, -0.15]}>
+              <cylinderGeometry args={[0.035, 0.035, 0.14, 12]} />
+              <meshStandardMaterial color="#1e293b" roughness={0.7} />
+            </mesh>
+          </group>
         ))}
         {/* Starboard Cylinder Heads */}
         {[-0.62, 0.62].map((zOff, idx) => (
-          <mesh
-            key={`s-head-${idx}`}
-            position={[1.62 + 1.45 * e, 0.05, zOff]}
-          >
-            <boxGeometry args={[0.36, 0.76, 0.76]} />
-            <meshStandardMaterial {...matProps('cylinder_heads_valves', '#38bdf8', 0.55, 0.35)} />
-          </mesh>
+          <group key={`s-head-${idx}`} position={[1.62 + 1.45 * e, 0.05, zOff]}>
+            <mesh>
+              <boxGeometry args={[0.36, 0.74, 0.74]} />
+              <meshStandardMaterial {...matProps('cylinder_heads_valves', '#526075', 0.65, 0.3)} />
+            </mesh>
+            {/* Valvetrain cover bevel */}
+            <mesh position={[0.19, 0, 0]}>
+              <boxGeometry args={[0.06, 0.62, 0.62]} />
+              <meshStandardMaterial {...matProps('cylinder_heads_valves', '#334155', 0.7, 0.3)} />
+            </mesh>
+            {/* Dual Spark Plug Boots */}
+            <mesh position={[0.08, 0.38, 0.15]}>
+              <cylinderGeometry args={[0.035, 0.035, 0.14, 12]} />
+              <meshStandardMaterial color="#1e293b" roughness={0.7} />
+            </mesh>
+            <mesh position={[0.08, 0.38, -0.15]}>
+              <cylinderGeometry args={[0.035, 0.035, 0.14, 12]} />
+              <meshStandardMaterial color="#1e293b" roughness={0.7} />
+            </mesh>
+          </group>
         ))}
       </group>
 
-      {/* 6. INTER-CYLINDER AIR COOLING PLENUM & BAFFLES */}
+      {/* 6. INTER-CYLINDER AIR COOLING PLENUM & RAM-AIR DUCTS */}
       <group
-        position={[0, 0.88 + 0.95 * e, 0]}
+        position={[0, 0.72 + 0.85 * e, 0]}
         onClick={(ev) => {
           ev.stopPropagation();
           onSelectSubsystem('cooling_plenum');
         }}
       >
-        <mesh>
-          <boxGeometry args={[2.75, 0.12, 2.05]} />
+        {/* Central carbon air scoop / distributor */}
+        <mesh position={[0, 0.08, -0.15]}>
+          <boxGeometry args={[0.92, 0.14, 1.45]} />
+          <meshStandardMaterial {...matProps('cooling_plenum', '#1e293b', 0.5, 0.4)} />
+        </mesh>
+        {/* Port cylinder bank cooling air shroud duct */}
+        <mesh position={[-1.12, 0.02, 0]} rotation={[0, 0, -0.08]}>
+          <boxGeometry args={[1.05, 0.08, 1.95]} />
           <meshStandardMaterial
-            {...matProps('cooling_plenum', '#1e293b', 0.45, 0.5)}
+            {...matProps('cooling_plenum', '#273549', 0.4, 0.45)}
             transparent
-            opacity={0.82}
+            opacity={0.88}
           />
+        </mesh>
+        {/* Starboard cylinder bank cooling air shroud duct */}
+        <mesh position={[1.12, 0.02, 0]} rotation={[0, 0, 0.08]}>
+          <boxGeometry args={[1.05, 0.08, 1.95]} />
+          <meshStandardMaterial
+            {...matProps('cooling_plenum', '#273549', 0.4, 0.45)}
+            transparent
+            opacity={0.88}
+          />
+        </mesh>
+        {/* Forward ram-air intake bellmouth */}
+        <mesh position={[0, 0.08, 0.78]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.32, 0.28, 0.35, 20]} />
+          <meshStandardMaterial {...matProps('cooling_plenum', '#0f172a', 0.6, 0.3)} />
         </mesh>
       </group>
 
@@ -831,7 +877,7 @@ export const Engine3DViewport: React.FC<{
   const [animateKinematics, setAnimateKinematics] = useState<boolean>(true);
   const [cameraResetKey, setCameraResetKey] = useState<number>(0);
   const [cameraPos, setCameraPos] = useState<[number, number, number]>([
-    3.6, 2.2, 3.8,
+    3.1, 1.8, 3.3,
   ]);
   const [webglAvailable, setWebglAvailable] = useState<boolean>(true);
 
@@ -978,28 +1024,28 @@ export const Engine3DViewport: React.FC<{
             <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
               <button
                 className="btn btn-sm"
-                onClick={() => handleCameraPreset([3.6, 2.2, 3.8])}
+                onClick={() => handleCameraPreset([3.1, 1.8, 3.3])}
                 title="Reset Isometric Camera"
               >
                 <RotateCcw size={11} /> Iso
               </button>
               <button
                 className="btn btn-sm"
-                onClick={() => handleCameraPreset([0, 5.2, 0.01])}
+                onClick={() => handleCameraPreset([0, 4.4, 0.01])}
                 title="Top Plan View"
               >
                 Top
               </button>
               <button
                 className="btn btn-sm"
-                onClick={() => handleCameraPreset([0, 0.4, 5.0])}
+                onClick={() => handleCameraPreset([0, 0.35, 4.2])}
                 title="Front Propeller View"
               >
                 Front
               </button>
               <button
                 className="btn btn-sm"
-                onClick={() => handleCameraPreset([4.8, 0.5, 0])}
+                onClick={() => handleCameraPreset([4.2, 0.4, 0])}
                 title="Side Cylinder View"
               >
                 Side
@@ -1023,14 +1069,14 @@ export const Engine3DViewport: React.FC<{
           <WebGLErrorBoundary fallback={fallbackSchematic}>
             <Canvas
               key={cameraResetKey}
-              camera={{ position: cameraPos, fov: 38, near: 0.1, far: 1000 }}
+              camera={{ position: cameraPos, fov: 34, near: 0.1, far: 1000 }}
               gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
               style={{ width: '100%', height: '100%', flex: 1, minHeight: 380, display: 'block' }}
             >
               <ambientLight intensity={0.8} />
               <directionalLight position={[6, 8, 5]} intensity={1.5} />
-              <directionalLight position={[-6, -4, -4]} intensity={0.65} color="#38bdf8" />
-              <pointLight position={[0, 0, 0]} intensity={0.4} color="#38bdf8" />
+              <directionalLight position={[-6, -4, -4]} intensity={0.65} color="#36d9ff" />
+              <pointLight position={[0, 0, 0]} intensity={0.4} color="#36d9ff" />
               <gridHelper
                 args={[10, 20, '#1d3166', '#0d152a']}
                 position={[0, -1.45, 0]}
@@ -1049,6 +1095,7 @@ export const Engine3DViewport: React.FC<{
                 makeDefault
                 enableDamping
                 dampingFactor={0.08}
+                target={[0, 0.05, 0]}
                 minDistance={1.2}
                 maxDistance={18}
               />
@@ -1190,28 +1237,28 @@ export const Engine3DViewport: React.FC<{
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             <button
               className="btn"
-              onClick={() => handleCameraPreset([3.6, 2.2, 3.8])}
+              onClick={() => handleCameraPreset([3.1, 1.8, 3.3])}
               title="Reset Isometric Camera"
             >
               <RotateCcw size={12} /> Iso
             </button>
             <button
               className="btn"
-              onClick={() => handleCameraPreset([0, 5.2, 0.01])}
+              onClick={() => handleCameraPreset([0, 4.4, 0.01])}
               title="Top Plan View"
             >
               <Camera size={12} /> Top
             </button>
             <button
               className="btn"
-              onClick={() => handleCameraPreset([0, 0.4, 5.0])}
+              onClick={() => handleCameraPreset([0, 0.35, 4.2])}
               title="Front Propeller View"
             >
               Front
             </button>
             <button
               className="btn"
-              onClick={() => handleCameraPreset([4.8, 0.5, 0])}
+              onClick={() => handleCameraPreset([4.2, 0.4, 0])}
               title="Side Cylinder Bank View"
             >
               Side
@@ -1242,7 +1289,7 @@ export const Engine3DViewport: React.FC<{
           <WebGLErrorBoundary fallback={fallbackSchematic}>
             <Canvas
               key={cameraResetKey}
-              camera={{ position: cameraPos, fov: 38, near: 0.1, far: 1000 }}
+              camera={{ position: cameraPos, fov: 34, near: 0.1, far: 1000 }}
               gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
               style={{ width: '100%', height: '100%', flex: 1, minHeight: 440, display: 'block' }}
             >
@@ -1251,9 +1298,9 @@ export const Engine3DViewport: React.FC<{
               <directionalLight
                 position={[-6, -4, -4]}
                 intensity={0.65}
-                color="#38bdf8"
+                color="#36d9ff"
               />
-              <pointLight position={[0, 0, 0]} intensity={0.4} color="#38bdf8" />
+              <pointLight position={[0, 0, 0]} intensity={0.4} color="#36d9ff" />
               <gridHelper
                 args={[10, 20, '#1d3166', '#0d152a']}
                 position={[0, -1.45, 0]}
@@ -1272,6 +1319,7 @@ export const Engine3DViewport: React.FC<{
                 makeDefault
                 enableDamping
                 dampingFactor={0.08}
+                target={[0, 0.05, 0]}
                 minDistance={1.2}
                 maxDistance={18}
               />

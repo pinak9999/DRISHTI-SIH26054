@@ -245,51 +245,52 @@ export const FleetCommandCenterScreen: React.FC<{
     }
   };
 
-  // Cylinder status data derived from live telemetry or nominal values
-  const cyl1Temp = latestState ? Math.round(latestState.actual.cht_c + 14) : 482;
-  const cyl2Temp = latestState ? Math.round(latestState.actual.cht_c) : 468;
-  const cyl3Temp = latestState ? Math.round(latestState.actual.cht_c - 13) : 455;
-  const cyl4Temp = latestState ? Math.round(latestState.actual.cht_c + 3) : 471;
+  // Cylinder status data derived from live telemetry or nominal values (Rotax 914F Celsius scale)
+  const baseCht = latestState ? latestState.actual.cht_c : 118;
+  const cyl1Temp = Math.round(baseCht + 3.2);
+  const cyl2Temp = Math.round(baseCht - 1.5);
+  const cyl3Temp = Math.round(baseCht + 1.8);
+  const cyl4Temp = Math.round(baseCht - 2.4);
   const oilTemp = latestState ? Math.round(latestState.actual.oil_temp_c) : 92;
-  const fuelFlow = latestState ? latestState.actual.fuel_flow_lph.toFixed(1) : '3.2';
+  const fuelFlow = latestState ? latestState.actual.fuel_flow_lph.toFixed(1) : '22.4';
 
-  // Multi-cylinder temperature trend data (last 60 mins simulation points)
+  // Multi-cylinder temperature trend data (last 25 telemetry points)
   const cylTrendData = useMemo(() => {
     const pts = telemetry.slice(-25);
     if (pts.length === 0) {
       return [
-        { time: '10:00', cyl1: 430, cyl2: 380, cyl3: 310, cyl4: 290 },
-        { time: '10:15', cyl1: 460, cyl2: 410, cyl3: 340, cyl4: 320 },
-        { time: '10:30', cyl1: 475, cyl2: 430, cyl3: 360, cyl4: 340 },
-        { time: '10:45', cyl1: 490, cyl2: 450, cyl3: 380, cyl4: 350 },
-        { time: '11:00', cyl1: 482, cyl2: 468, cyl3: 395, cyl4: 365 },
+        { time: '10:00', cyl1: 115, cyl2: 112, cyl3: 114, cyl4: 111 },
+        { time: '10:15', cyl1: 118, cyl2: 114, cyl3: 117, cyl4: 113 },
+        { time: '10:30', cyl1: 121, cyl2: 117, cyl3: 120, cyl4: 115 },
+        { time: '10:45', cyl1: 124, cyl2: 120, cyl3: 122, cyl4: 118 },
+        { time: '11:00', cyl1: 122, cyl2: 119, cyl3: 121, cyl4: 117 },
       ];
     }
     return pts.map((t, i) => {
-      const baseCht = t.actual.cht_c;
+      const bCht = t.actual.cht_c;
       return {
         time: `${Math.round(t.mission_elapsed_sec)}s`,
-        cyl1: Number((baseCht + 14 + (i % 3)).toFixed(0)),
-        cyl2: Number((baseCht + (i % 2)).toFixed(0)),
-        cyl3: Number((baseCht - 13 + ((i * 2) % 4)).toFixed(0)),
-        cyl4: Number((baseCht + 3 - (i % 3)).toFixed(0)),
+        cyl1: Number((bCht + 3.2 + (i % 2)).toFixed(0)),
+        cyl2: Number((bCht - 1.5).toFixed(0)),
+        cyl3: Number((bCht + 1.8 + ((i * 2) % 3)).toFixed(0)),
+        cyl4: Number((bCht - 2.4).toFixed(0)),
       };
     });
   }, [telemetry]);
 
   // Derived Telemetry Values
-  const rpmVal = latestState?.actual.rpm ? Math.round(latestState.actual.rpm) : 2450;
-  const chtAvg = latestState?.actual.cht_c ? Math.round(latestState.actual.cht_c) : 468;
-  const egtAvg = latestState?.actual.egt_c ? Math.round(latestState.actual.egt_c) : 725;
+  const rpmVal = latestState?.actual.rpm ? Math.round(latestState.actual.rpm) : 4850;
+  const chtAvg = latestState?.actual.cht_c ? Math.round(latestState.actual.cht_c) : 118;
+  const egtAvg = latestState?.actual.egt_c ? Math.round(latestState.actual.egt_c) : 785;
   const oilPressure = latestState?.actual.oil_pressure_bar
     ? Math.round(latestState.actual.oil_pressure_bar * 14.5038)
-    : 68;
+    : 62;
   const vibVal = latestState?.actual.vibration_rms_mms
     ? latestState.actual.vibration_rms_mms.toFixed(1)
-    : '1.8';
+    : '2.1';
   const batteryVal = latestState?.actual.battery_voltage_v
     ? latestState.actual.battery_voltage_v.toFixed(1)
-    : '14.1';
+    : '28.2';
 
   // RUL metrics
   const rulHours = latestState?.predicted.rul_hours
@@ -298,15 +299,6 @@ export const FleetCommandCenterScreen: React.FC<{
   const rulPercent = latestState?.predicted.health_index
     ? Math.round(latestState.predicted.health_index)
     : 72;
-
-  // Ranked detected issues list
-  const rankedIssues = [
-    { id: '1', title: 'Cylinder 2 Overheating', sev: 'critical', time: '2 min ago' },
-    { id: '2', title: 'Increasing Vibration (Cyl 4)', sev: 'high', time: '5 min ago' },
-    { id: '3', title: 'Oil Pressure Fluctuation', sev: 'medium', time: '12 min ago' },
-    { id: '4', title: 'Potential Combustion Instability', sev: 'medium', time: '18 min ago' },
-    { id: '5', title: 'Sensor Drift (EGT)', sev: 'low', time: '25 min ago' },
-  ];
 
   return (
     <div>
@@ -661,37 +653,38 @@ export const FleetCommandCenterScreen: React.FC<{
           </div>
 
           <div className="alerts-list-v4">
-            {sourceAlerts.length > 0
-              ? sourceAlerts.slice(0, 5).map((a) => (
-                  <div key={a.alert_id} className={`alert-item-v4 ${a.severity.toLowerCase()}`}>
-                    <span className="alert-left-title">
-                      {a.severity === 'CRITICAL' ? '🔥' : '⚡'} {a.fault_class}
+            {sourceAlerts.length > 0 ? (
+              sourceAlerts.slice(0, 5).map((a) => (
+                <div key={a.alert_id} className={`alert-item-v4 ${a.severity.toLowerCase()}`}>
+                  <span className="alert-left-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {a.severity === 'CRITICAL' ? (
+                      <Flame size={12} color="#f87171" style={{ flexShrink: 0 }} />
+                    ) : (
+                      <AlertTriangle size={12} color="#fbbf24" style={{ flexShrink: 0 }} />
+                    )}
+                    <span>{a.fault_class}</span>
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span className={`alert-severity-pill ${a.severity.toLowerCase()}`}>
+                      {a.severity}
                     </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span className={`alert-severity-pill ${a.severity.toLowerCase()}`}>
-                        {a.severity}
-                      </span>
-                      <button
-                        className="btn btn-sm"
-                        style={{ padding: '1px 5px', fontSize: 8.5 }}
-                        onClick={() => handleToggleAcknowledge(a.alert_id, a.acknowledged)}
-                      >
-                        {a.acknowledged ? 'Ack' : 'Unack'}
-                      </button>
-                    </div>
+                    <button
+                      className="btn btn-sm"
+                      style={{ padding: '1px 5px', fontSize: 8.5 }}
+                      onClick={() => handleToggleAcknowledge(a.alert_id, a.acknowledged)}
+                    >
+                      {a.acknowledged ? 'Ack' : 'Unack'}
+                    </button>
                   </div>
-                ))
-              : rankedIssues.map((item) => (
-                  <div key={item.id} className={`alert-item-v4 ${item.sev}`}>
-                    <span className="alert-left-title">{item.title}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span className={`alert-severity-pill ${item.sev}`}>
-                        {item.sev}
-                      </span>
-                      <span className="alert-time-text">{item.time}</span>
-                    </div>
-                  </div>
-                ))}
+                </div>
+              ))
+            ) : (
+              <div style={{ padding: '16px 10px', textAlign: 'center', color: '#91a4bd', fontSize: 11.5 }}>
+                <CheckCircle2 size={16} color="#10b981" style={{ marginBottom: 4, display: 'inline-block' }} />
+                <div style={{ color: '#eaf2fc', fontWeight: 600 }}>Nominal Operational Envelope</div>
+                <div style={{ fontSize: 10, color: '#64748b' }}>No active diagnostic fault alerts on monitored channels</div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -699,7 +692,7 @@ export const FleetCommandCenterScreen: React.FC<{
         <div className="bottom-panel-card">
           <div className="panel-header-v4">
             <div className="panel-header-title-group">
-              <Gauge size={14} color="#22c55e" />
+              <Gauge size={14} color="#10b981" />
               <div>
                 <span className="panel-title-text">Remaining Useful Life (RUL)</span>
                 <span className="panel-sub-text" style={{ marginLeft: 6 }}>AI Predicted Life (Current Condition)</span>
@@ -710,32 +703,42 @@ export const FleetCommandCenterScreen: React.FC<{
           <div className="rul-content-row">
             <RulDonutGauge percent={rulPercent} hours={rulHours} />
 
-            <div className="rul-risk-legend-list">
-              <div className="risk-row">
-                <span className="risk-label">
-                  <span className="risk-dot" style={{ background: '#22c55e' }} /> Normal
-                </span>
-                <span className="risk-pct-mono">72%</span>
-              </div>
-              <div className="risk-row">
-                <span className="risk-label">
-                  <span className="risk-dot" style={{ background: '#f59e0b' }} /> Caution
-                </span>
-                <span className="risk-pct-mono">18%</span>
-              </div>
-              <div className="risk-row">
-                <span className="risk-label">
-                  <span className="risk-dot" style={{ background: '#f97316' }} /> High Risk
-                </span>
-                <span className="risk-pct-mono">8%</span>
-              </div>
-              <div className="risk-row">
-                <span className="risk-label">
-                  <span className="risk-dot" style={{ background: '#ef4444' }} /> Critical
-                </span>
-                <span className="risk-pct-mono">2%</span>
-              </div>
-            </div>
+            {(() => {
+              const normalProb = latestState?.predicted.class_probabilities?.['Normal'] !== undefined
+                ? Math.round(latestState.predicted.class_probabilities['Normal'] * 100)
+                : Math.min(100, Math.round(rulPercent));
+              const cautionProb = Math.max(0, Math.round((100 - normalProb) * 0.55));
+              const highRiskProb = Math.max(0, Math.round((100 - normalProb) * 0.35));
+              const critProb = Math.max(0, 100 - normalProb - cautionProb - highRiskProb);
+              return (
+                <div className="rul-risk-legend-list">
+                  <div className="risk-row">
+                    <span className="risk-label">
+                      <span className="risk-dot" style={{ background: '#10b981' }} /> Normal
+                    </span>
+                    <span className="risk-pct-mono">{normalProb}%</span>
+                  </div>
+                  <div className="risk-row">
+                    <span className="risk-label">
+                      <span className="risk-dot" style={{ background: '#f59e0b' }} /> Caution
+                    </span>
+                    <span className="risk-pct-mono">{cautionProb}%</span>
+                  </div>
+                  <div className="risk-row">
+                    <span className="risk-label">
+                      <span className="risk-dot" style={{ background: '#f97316' }} /> High Risk
+                    </span>
+                    <span className="risk-pct-mono">{highRiskProb}%</span>
+                  </div>
+                  <div className="risk-row">
+                    <span className="risk-label">
+                      <span className="risk-dot" style={{ background: '#ef4444' }} /> Critical
+                    </span>
+                    <span className="risk-pct-mono">{critProb}%</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <button

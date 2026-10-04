@@ -33,3 +33,33 @@ data/
 # Model backups and local database
 backend/artifacts/backups/
 backend/artifacts/*.db
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Frontend dependencies and generated builds
+node_modules/
+frontend/dist/
+frontend/node_modules/
+
+# Large raw datasets and generated datasets
+data/raw/
+data/processed/
+
+# Database backups and temporary files
+backend/artifacts/backups/
+*.db-wal
+*.db-shm
+
+# Duplicate project archives and extracted copies
+DRISHTI_SIH26054_VERIFIED/
+DRISHTI_SIH26054_VERIFIED.zip
+DRISHTI_SIH26054_PPT_ALIGNED.zip
+
+# Local secrets
+.env
+.env.*
+!.env.example

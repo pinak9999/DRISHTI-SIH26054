@@ -29,19 +29,19 @@
   --border-glow:    rgba(56, 217, 255, 0.25);
 
   /* Typography / Text Colors */
-  --text-primary:   #F1F5F9;
-  --text-secondary: #9DB0C8;
-  --text-muted:     #647B98;
-  --text-accent:    #38D9FF;
+  --text-primary:   #EAF2FC;
+  --text-secondary: #91A4BD;
+  --text-muted:     #64748B;
+  --text-accent:    #36D9FF;
   --text-white:     #FFFFFF;
 
   /* Primary Aerospace Cyan */
-  --primary-cyan:   #38D9FF;
-  --cyan:           #38D9FF;
-  --cyan-dim:       rgba(56, 217, 255, 0.14);
-  --cyan-glow:      rgba(56, 217, 255, 0.35);
+  --primary-cyan:   #36D9FF;
+  --cyan:           #36D9FF;
+  --cyan-dim:       rgba(54, 217, 255, 0.14);
+  --cyan-glow:      rgba(54, 217, 255, 0.35);
   --electric-blue:  #0284C7;
-  --electric-cyan:  #38D9FF;
+  --electric-cyan:  #36D9FF;
 
   /* Semantics */
   --status-nominal:  #10B981;
@@ -49,12 +49,14 @@
   --status-caution:  #F59E0B;
   --status-warning:  #F97316;
   --status-critical: #EF4444;
+  --status-disabled: #64748B;
 
   --color-nominal:   #10B981;
   --color-caution:   #F59E0B;
   --color-warning:   #F97316;
   --color-critical:  #EF4444;
-  --color-info:      #38BDF8;
+  --color-disabled:  #64748B;
+  --color-info:      #36D9FF;
   --color-purple:    #A855F7;
 
   /* Font Stacks */
@@ -1578,11 +1580,22 @@ body {
 }
 
 @media (max-width: 1366px) {
-  :root { --sidebar-w: 205px; }
+  :root { --sidebar-w: 200px; }
   .kpi-v4-val { font-size: 20px; }
   .gauges-grid-8 { grid-template-columns: repeat(4, 1fr); gap: 6px 4px; }
   .gauge-svg-wrap { width: 64px; height: 38px; }
   .gauge-val-big { font-size: 13.5px; }
+  .topbar-project-banner { max-width: 380px; }
+  .topbar-drdo-crest { display: flex; }
+}
+
+@media (max-width: 1280px) {
+  :root { --sidebar-w: 190px; }
+  .topbar-project-banner { max-width: 320px; font-size: 10px; }
+  .banner-subtitle { display: none; }
+  .kpi-row-5 { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .kpi-v4-val { font-size: 18px; }
+  .bottom-row-3panels { grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; }
 }
 
 @media (max-width: 1120px) {

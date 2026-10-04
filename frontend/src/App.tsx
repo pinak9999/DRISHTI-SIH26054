@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Search,
   Settings,
+  ShieldCheck,
   Sliders,
   WifiOff,
 } from 'lucide-react';
@@ -54,10 +55,10 @@ const WORKSTATION_NAV = [
   { id: 'faults', num: '4', label: 'Fault Investigation', icon: Search },
   { id: 'simulator', num: '5', label: 'Mission Simulator', icon: Sliders },
   { id: 'replay', num: '6', label: 'Historical Replay', icon: History },
-  { id: 'rul', num: '7', label: 'Predictive Maintenance & RUL', icon: Gauge },
+  { id: 'rul', num: '7', label: 'Predictive Maintenance', icon: Gauge },
   { id: 'evaluation', num: '8', label: 'Model Evaluation', icon: Award },
   { id: 'reports', num: '9', label: 'Reports & Settings', icon: FileText },
-  { id: 'docs', num: '10', label: 'Data Sources & Documentation', icon: BookOpen },
+  { id: 'docs', num: '10', label: 'Data Sources & Diagnostics', icon: BookOpen },
 ];
 
 export const App: React.FC = () => {
@@ -73,12 +74,14 @@ export const App: React.FC = () => {
   const [missions, setMissions] = useState<Record<string, any>[]>([]);
   const [reports, setReports] = useState<Record<string, any>[]>([]);
   const [backendHealth, setBackendHealth] = useState<Record<string, any> | null>(null);
+  const [measuredLatency, setMeasuredLatency] = useState<number>(145);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadGlobalData = async () => {
     try {
       setErrorBanner(null);
+      const tStart = performance.now();
       const [h, fl, cat, ms, mis, reps] = await Promise.all([
         drishtiApi.getHealth().catch((err) => ({ status: 'error', error: err.message })),
         drishtiApi.getFleet().catch(() => null),
@@ -87,7 +90,13 @@ export const App: React.FC = () => {
         drishtiApi.listMissions().catch(() => ({ total: 0, items: [] })),
         drishtiApi.listReports().catch(() => ({ total: 0, items: [] })),
       ]);
-      setBackendHealth(h.status === 'ok' ? h : null);
+      const rtt = Math.round(performance.now() - tStart);
+      if (h.status === 'ok') {
+        setBackendHealth(h);
+        setMeasuredLatency(rtt);
+      } else {
+        setBackendHealth(null);
+      }
       if (fl) setFleet(fl);
       if (cat) setCatalog(cat);
       if (ms) setModelStatus(ms);
@@ -128,6 +137,10 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     loadGlobalData();
+    const interval = setInterval(() => {
+      loadGlobalData();
+    }, 25000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -157,10 +170,7 @@ export const App: React.FC = () => {
     (fleet?.engines || []).find((e) => e.engine_id === selectedEngineId) || null;
 
   const apiOnline = backendHealth?.status === 'ok';
-  const latencyMs = backendHealth?.last_inference_latency_ms
-    ? Math.round(backendHealth.last_inference_latency_ms)
-    : 200;
-  const activeAlertCount = fleet?.total_active_alerts ?? (engineAlerts.length || 25);
+  const activeAlertCount = fleet?.total_active_alerts ?? (engineAlerts.length || 0);
 
   return (
     <div className="workstation-shell">
@@ -172,10 +182,10 @@ export const App: React.FC = () => {
         <div className="topbar-brand">
           <div className="topbar-drone-logo">
             <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
-              <path d="M4 14L16 4L28 14L24 16L16 10L8 16L4 14Z" fill="#38bdf8" />
+              <path d="M4 14L16 4L28 14L24 16L16 10L8 16L4 14Z" fill="#36d9ff" />
               <path d="M16 10L20 28L16 25L12 28L16 10Z" fill="#0284c7" />
-              <path d="M8 16L2 22L7 20L11 22L8 16Z" fill="#38bdf8" fillOpacity="0.8" />
-              <path d="M24 16L30 22L25 20L21 22L24 16Z" fill="#38bdf8" fillOpacity="0.8" />
+              <path d="M8 16L2 22L7 20L11 22L8 16Z" fill="#36d9ff" fillOpacity="0.8" />
+              <path d="M24 16L30 22L25 20L21 22L24 16Z" fill="#36d9ff" fillOpacity="0.8" />
             </svg>
           </div>
           <div className="topbar-brand-text">
@@ -200,7 +210,9 @@ export const App: React.FC = () => {
 
         {/* 3. Official DRDO Crest Badge */}
         <div className="topbar-drdo-crest">
-          <div className="drdo-seal-circle">🛡️</div>
+          <div className="drdo-seal-circle">
+            <ShieldCheck size={14} color="#36d9ff" />
+          </div>
           <div className="drdo-crest-text">
             <span className="drdo-crest-title">DRDO</span>
             <span className="drdo-crest-sub">DEFENCE R&D ORGANISATION</span>
@@ -216,7 +228,7 @@ export const App: React.FC = () => {
             title={`Connected to: ${drishtiApi.getBaseUrl()}`}
           >
             <span className="api-pulse-dot" />
-            <span>{apiOnline ? `API: ONLINE ${latencyMs} ms` : 'API: OFFLINE'}</span>
+            <span>{apiOnline ? `API: ONLINE ${measuredLatency} ms` : 'API: OFFLINE'}</span>
           </div>
 
           <select
