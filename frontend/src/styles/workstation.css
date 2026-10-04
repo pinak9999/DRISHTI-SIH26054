@@ -1,4 +1,5 @@
 /* =========================================================================
+<<<<<<< HEAD
    DRISHTI — Aerospace Digital Twin Intelligence Platform
    Design System | SIH26054 DRDO
    ========================================================================= */
@@ -90,6 +91,83 @@ html {
   font-size: 14px;
 }
 
+=======
+   DRISHTI — Premium Aerospace Engineering Workstation
+   Design System v3.0 | SIH26054 DRDO
+   Professional Command-Center Interface
+   ========================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* =========================================================================
+   DESIGN TOKENS — Deep Midnight Navy Palette
+   ========================================================================= */
+:root {
+  /* Surfaces */
+  --bg-root:        #060a17;
+  --bg-panel:       #0b1126;
+  --bg-card:        #0e152d;
+  --bg-elevated:    #131c3a;
+  --bg-hover:       #19244a;
+  --bg-viewport:    #050814;
+  --bg-input:       #0a0f24;
+  --bg-overlay:     rgba(6, 10, 23, 0.94);
+  --bg-surface:     #111936;
+
+  /* Restrained Blue-Grey Borders */
+  --border-subtle:  #182342;
+  --border-medium:  #223258;
+  --border-strong:  #2c4070;
+  --border-accent:  rgba(56, 189, 248, 0.35);
+
+  /* Typography / Text Colors */
+  --text-primary:   #e2e8f0;
+  --text-secondary: #8b9cc0;
+  --text-muted:     #526284;
+  --text-accent:    #38bdf8;
+  --text-white:     #ffffff;
+
+  /* Aerospace Status Colors */
+  --color-nominal:  #22c55e;
+  --color-healthy:  #22c55e;
+  --color-caution:  #f59e0b;
+  --color-warning:  #f97316;
+  --color-critical: #ef4444;
+  --color-info:     #38bdf8;
+  --color-muted:    #94a3b8;
+
+  /* Cyan Accent System */
+  --cyan:           #38bdf8;
+  --cyan-dim:       rgba(56, 189, 248, 0.08);
+  --cyan-border:    rgba(56, 189, 248, 0.28);
+  --cyan-glow:      rgba(56, 189, 248, 0.12);
+
+  /* Font Stacks */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* Shell Metrics */
+  --topbar-h:           52px;
+  --sidebar-w:          64px;
+  --sidebar-w-expanded: 230px;
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+
+  /* Shadows */
+  --shadow-card:   0 1px 3px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.02);
+  --shadow-panel:  0 4px 16px rgba(0,0,0,0.5);
+  --shadow-glow:   0 0 20px rgba(56, 189, 248, 0.08);
+  --shadow-topbar: 0 1px 0 rgba(0,0,0,0.35), 0 2px 10px rgba(0,0,0,0.25);
+}
+
+/* =========================================================================
+   RESET & BASE
+   ========================================================================= */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
 body {
   background-color: var(--bg-root);
   color: var(--text-primary);
@@ -101,6 +179,7 @@ body {
   overflow-x: hidden;
 }
 
+<<<<<<< HEAD
 /* Scrollbar System */
 ::-webkit-scrollbar {
   width: 6px;
@@ -130,6 +209,20 @@ body {
 
 /* =========================================================================
    4. TOPBAR HEADER
+=======
+/* =========================================================================
+   APP SHELL
+   ========================================================================= */
+.workstation-shell {
+  display: grid;
+  grid-template-rows: var(--topbar-h) 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* =========================================================================
+   TOP COMMAND BAR
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
    ========================================================================= */
 .topbar {
   background: var(--bg-panel);
@@ -138,19 +231,182 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 18px;
+<<<<<<< HEAD
   gap: 14px;
+=======
+  gap: 12px;
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
   z-index: 50;
   box-shadow: var(--shadow-topbar);
   height: var(--topbar-h);
 }
 
+<<<<<<< HEAD
 .topbar-brand {
+=======
+.brand-block {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
 }
 
+.brand-symbol {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.4));
+}
+
+.brand-text { display: flex; flex-direction: column; }
+
+.brand-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.brand-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-white);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.brand-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--cyan);
+  background: rgba(56, 189, 248, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  letter-spacing: 0.05em;
+}
+
+.brand-subtitle {
+  font-size: 9.5px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.topbar-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Status Pill */
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+}
+.status-pill.offline {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+.status-pill.connecting {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot.online { background: #22c55e; box-shadow: 0 0 6px rgba(34, 197, 94, 0.6); }
+.status-dot.offline { background: #ef4444; }
+.status-dot.connecting { background: #f59e0b; animation: pulse-dot 1.2s infinite; }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.status-text {
+  font-weight: 600;
+  color: #4ade80;
+  font-size: 11px;
+}
+.status-pill.offline .status-text { color: #f87171; }
+.status-pill.connecting .status-text { color: #fbbf24; }
+
+/* Select Pill */
+.topbar-select-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-medium);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.pill-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.pill-select {
+  background: transparent;
+  border: none;
+  color: var(--text-white);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+.pill-select option {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+/* Phase Pill */
+.phase-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 11px;
+}
+.phase-icon { color: var(--cyan); }
+.phase-val { font-weight: 600; color: #e0f2fe; }
+
+/* Topbar Right */
+.topbar-right {
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+<<<<<<< HEAD
 .topbar-drone-logo {
   width: 32px;
   height: 32px;
@@ -369,10 +625,377 @@ body {
   font-family: var(--font-mono);
   min-width: 15px;
   height: 15px;
+=======
+.drdo-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+}
+
+.drdo-crest {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.drdo-text { display: flex; flex-direction: column; }
+.drdo-org {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #fbbf24;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+}
+.drdo-sub {
+  font-size: 9px;
+  color: var(--text-secondary);
+  line-height: 1.1;
+}
+
+.topbar-icon-btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  position: relative;
+}
+.topbar-icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-white);
+  border-color: var(--border-medium);
+}
+
+.alert-bell-btn .alert-count-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 8.5px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  min-width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2px;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+
+.operator-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+/* =========================================================================
+   WORKSTATION BODY & SIDEBAR
+   ========================================================================= */
+.workstation-body {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  overflow: hidden;
+  height: calc(100vh - var(--topbar-h));
+  transition: grid-template-columns 0.2s ease;
+}
+
+.workstation-body.sidebar-expanded {
+  grid-template-columns: var(--sidebar-w-expanded) 1fr;
+}
+
+.sidebar {
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: var(--sidebar-w);
+  transition: width 0.2s ease;
+  z-index: 40;
+}
+
+.sidebar.expanded {
+  width: var(--sidebar-w-expanded);
+}
+
+.sidebar-header-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 10px 4px;
+}
+
+.rail-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.12s ease;
+}
+.rail-toggle-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-white);
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-medium) transparent;
+}
+.sidebar-nav::-webkit-scrollbar { width: 3px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 2px; }
+
+.nav-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  position: relative;
+  white-space: nowrap;
+}
+
+.sidebar:not(.expanded) .nav-btn {
+  justify-content: center;
+  padding: 9px 4px;
+}
+
+.sidebar:not(.expanded) .nav-label {
+  display: none;
+}
+
+.nav-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.nav-btn.active {
+  background: linear-gradient(90deg, rgba(2, 132, 199, 0.22) 0%, rgba(56, 189, 248, 0.08) 100%);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.12);
+}
+
+.nav-icon {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.nav-btn.active .nav-icon {
+  opacity: 1;
+  color: var(--cyan);
+}
+.nav-btn:hover .nav-icon { opacity: 1; }
+
+.active-glow-indicator {
+  position: absolute;
+  right: 6px;
+  width: 4px;
+  height: 14px;
+  background: var(--cyan);
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--cyan);
+}
+
+/* Sidebar Aerospace Mission Card */
+.sidebar-mission-card {
+  margin: 10px 8px 6px;
+  border-radius: 8px;
+  background: radial-gradient(circle at 50% 0%, #0d1e3d 0%, #080d1e 100%);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.mission-card-content {
+  padding: 6px 8px 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.mission-headline {
+  font-size: 8.5px;
+  font-weight: 700;
+  color: #e0f2fe;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  margin-top: 4px;
+}
+.mission-subtext {
+  font-size: 8px;
+  color: var(--cyan);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.sidebar-footer {
+  border-top: 1px solid var(--border-subtle);
+  padding: 8px;
+}
+.sidebar:not(.expanded) .sidebar-footer { display: none; }
+
+.sidebar-disclosure {
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 9.5px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+.sidebar-disclosure strong {
+  color: var(--cyan);
+  display: block;
+  font-size: 9px;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+/* =========================================================================
+   MAIN VIEWPORT
+   ========================================================================= */
+.main-viewport {
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg-root);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-medium) transparent;
+}
+.main-viewport::-webkit-scrollbar { width: 5px; }
+.main-viewport::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
+
+.viewport-content {
+  padding: 16px 20px;
+  max-width: 1720px;
+  margin: 0 auto;
+}
+
+/* Error Banner */
+.error-banner {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-left: 3px solid var(--color-critical);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  color: #fca5a5;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* =========================================================================
+   COMMAND CENTER: 4 BALANCED KPI CARDS
+   ========================================================================= */
+.cmd-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.cmd-kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: all 0.15s ease;
+}
+.cmd-kpi-card:hover {
+  border-color: var(--border-medium);
+  transform: translateY(-1px);
+}
+
+.cmd-kpi-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cmd-kpi-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.cmd-kpi-val {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #ffffff;
+}
+
+.cmd-kpi-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cmd-kpi-icon-wrap {
+  width: 40px;
+  height: 40px;
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+<<<<<<< HEAD
   padding: 0 3px;
   box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
 }
@@ -465,12 +1088,172 @@ body {
 }
 .sidebar-nav-item.active {
   background: rgba(56, 189, 248, 0.1);
+=======
+  flex-shrink: 0;
+}
+.cmd-kpi-icon-wrap.blue   { background: rgba(2, 132, 199, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+.cmd-kpi-icon-wrap.amber  { background: rgba(217, 119, 6, 0.15);  color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+.cmd-kpi-icon-wrap.red    { background: rgba(220, 38, 38, 0.15);  color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+.cmd-kpi-icon-wrap.green  { background: rgba(5, 150, 105, 0.15);  color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+
+/* =========================================================================
+   COMMAND CENTER: ACTION & VERIFICATION BAR
+   ========================================================================= */
+.cmd-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 8px 14px;
+  flex-wrap: wrap;
+}
+
+.cmd-action-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.verification-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.cmd-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* =========================================================================
+   COMMAND CENTER: MIDDLE 3-COLUMN WORKSPACE
+   ========================================================================= */
+.cmd-mid-grid {
+  display: grid;
+  grid-template-columns: minmax(420px, 1.35fr) minmax(240px, 0.75fr) minmax(270px, 0.85fr);
+  gap: 12px;
+  margin-bottom: 14px;
+  align-items: stretch;
+}
+
+/* Column 1: 3D Twin Box */
+.twin-3d-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  min-height: 480px;
+}
+
+.twin-3d-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.twin-title-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.twin-badge-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.twin-title-main {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.twin-title-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* 3D Viewport container */
+.twin-viewport-relative {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 380px;
+}
+
+/* Subsystem Overlay Bar on left of 3D canvas */
+.subsystem-overlay-bar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: rgba(8, 13, 29, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 5px;
+  backdrop-filter: blur(6px);
+  max-width: 140px;
+}
+
+.subsystem-chip {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  white-space: nowrap;
+}
+.subsystem-chip:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-white);
+}
+.subsystem-chip.active {
+  background: rgba(2, 132, 199, 0.4);
+  border-color: rgba(56, 189, 248, 0.5);
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
   color: #ffffff;
   font-weight: 600;
   border-color: rgba(56, 189, 248, 0.35);
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.15);
 }
 
+<<<<<<< HEAD
 .sidebar-nav-num {
   font-family: var(--font-mono);
   font-size: 10.5px;
@@ -612,10 +1395,474 @@ body {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 11px 14px;
+=======
+/* Bottom Controls Overlay on 3D canvas */
+.twin-bottom-controls {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  right: 12px;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  background: rgba(6, 10, 24, 0.88);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 5px 10px;
+  backdrop-filter: blur(6px);
+  flex-wrap: wrap;
+}
+
+.ctrl-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ctrl-pill-btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.ctrl-pill-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-white);
+}
+.ctrl-pill-btn.active {
+  background: rgba(2, 132, 199, 0.4);
+  border-color: var(--cyan);
+  color: #ffffff;
+}
+
+.ctrl-hints {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* Column 2: Live Telemetry Panel */
+.live-telem-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-card);
+}
+
+.live-telem-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  margin-bottom: 8px;
+}
+
+.live-telem-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+}
+
+.streaming-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #4ade80;
+}
+
+.streaming-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px #22c55e;
+  animation: pulse-dot 1.2s infinite;
+}
+
+.telem-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.telem-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+  font-size: 11.5px;
+}
+
+.telem-name {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.telem-val-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.telem-val {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 11.5px;
+}
+
+.mini-bar-track {
+  width: 48px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.mini-bar-fill {
+  height: 100%;
+  background: var(--cyan);
+  border-radius: 2px;
+}
+
+/* Column 3: Engine Status Panel */
+.engine-status-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--shadow-card);
+}
+
+.status-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.status-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+}
+
+.engine-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.engine-id-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+}
+.engine-platform-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.engine-metadata-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 5px;
+  border: 1px solid var(--border-subtle);
+}
+
+.meta-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+}
+.meta-item-label { color: var(--text-muted); }
+.meta-item-val { font-family: var(--font-mono); font-weight: 600; color: #e2e8f0; }
+
+.gauge-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.gauge-label-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+}
+.gauge-name { color: var(--text-secondary); }
+.gauge-val { font-family: var(--font-mono); font-weight: 700; color: #ffffff; }
+
+.gauge-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.gauge-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+/* Fault Probability Section */
+.fault-prob-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.fault-prob-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.prob-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+}
+.prob-label { color: var(--text-secondary); width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prob-val { font-family: var(--font-mono); font-weight: 600; color: #e2e8f0; width: 36px; text-align: right; }
+.prob-bar-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.prob-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+/* =========================================================================
+   COMMAND CENTER: BOTTOM 3-COLUMN WORKSPACE
+   ========================================================================= */
+.cmd-bot-grid {
+  display: grid;
+  grid-template-columns: minmax(400px, 1.25fr) minmax(280px, 0.95fr) minmax(260px, 0.8fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+/* Trends Card */
+.trend-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-card);
+}
+
+.trend-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.trend-time-filters {
+  display: flex;
+  gap: 3px;
+  background: var(--bg-elevated);
+  padding: 2px;
+  border-radius: 4px;
+}
+.time-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.time-btn.active {
+  background: rgba(2, 132, 199, 0.6);
+  color: #ffffff;
+}
+
+.trend-legend-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+.legend-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+.legend-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+/* Fleet Overview Card */
+.fleet-table-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-card);
+}
+
+.card-action-link {
+  font-size: 11px;
+  color: var(--cyan);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+.card-action-link:hover { text-decoration: underline; }
+
+.fleet-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin-top: 4px;
+}
+.fleet-mini-table th {
+  text-align: left;
+  padding: 5px 6px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.fleet-mini-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  vertical-align: middle;
+}
+.fleet-mini-table tr.selected td {
+  background: rgba(56, 189, 248, 0.08);
+}
+.fleet-mini-table tr:hover td {
+  background: rgba(56, 189, 248, 0.04);
+}
+
+/* Recent Alerts Card */
+.recent-alerts-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-card);
+}
+
+.alerts-scroll-area {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  overflow-y: auto;
+  max-height: 220px;
+}
+
+.alert-item-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  border: 1px solid var(--border-subtle);
+  font-size: 11px;
+}
+.alert-item-box.critical { border-left: 3px solid #ef4444; }
+.alert-item-box.warning  { border-left: 3px solid #f97316; }
+.alert-item-box.caution  { border-left: 3px solid #f59e0b; }
+
+.alert-icon-col { flex-shrink: 0; }
+.alert-info-col { flex: 1; min-width: 0; }
+.alert-title-text {
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.alert-sub-text {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.alert-time-col {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+/* =========================================================================
+   STANDARD CARDS & PANELS
+   ========================================================================= */
+.panel-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-card);
+}
+
+.panel-card-header {
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+<<<<<<< HEAD
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-card);
@@ -625,10 +1872,17 @@ body {
   border-color: var(--border-medium);
   background: var(--bg-card-hover);
   transform: translateY(-1px);
+=======
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  flex-wrap: wrap;
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
 }
 
 .kpi-v4-content {
   display: flex;
+<<<<<<< HEAD
   flex-direction: column;
   gap: 2px;
 }
@@ -636,6 +1890,82 @@ body {
 .kpi-v4-label {
   font-size: 10px;
   font-weight: 600;
+=======
+  align-items: center;
+  gap: 6px;
+}
+.panel-card-title svg { color: var(--cyan); opacity: 0.8; }
+
+/* Screen Headers */
+.screen-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+
+.screen-title-block { display: flex; flex-direction: column; gap: 2px; }
+.screen-eyebrow {
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cyan);
+}
+.screen-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-white);
+  line-height: 1.25;
+}
+.screen-desc {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  max-width: 620px;
+}
+.screen-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Layout Grids */
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-secondary);
@@ -716,8 +2046,17 @@ body {
   font-family: var(--font-mono);
   color: #ffffff;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
+.badge-nominal  { background: rgba(34,197,94,0.1);   color: #4ade80;   border: 1px solid rgba(34,197,94,0.3);   }
+.badge-caution  { background: rgba(245,158,11,0.1);  color: #fbbf24;   border: 1px solid rgba(245,158,11,0.35); }
+.badge-warning  { background: rgba(249,115,22,0.1);  color: #fb923c;   border: 1px solid rgba(249,115,22,0.4);  }
+.badge-critical { background: rgba(239,68,68,0.1);   color: #f87171;   border: 1px solid rgba(239,68,68,0.4);   }
+.badge-info     { background: rgba(56,189,248,0.08); color: #38bdf8;   border: 1px solid rgba(56,189,248,0.28);  }
+.badge-synthetic{ background: rgba(100,116,139,0.1); color: #94a3b8;   border: 1px solid rgba(100,116,139,0.28); }
+.badge-muted    { background: rgba(255,255,255,0.04); color: #64748b;  border: 1px solid rgba(255,255,255,0.08);}
 
+<<<<<<< HEAD
 .engine-status-running-badge {
   background: rgba(16, 185, 129, 0.14);
   border: 1px solid rgba(16, 185, 129, 0.35);
@@ -744,9 +2083,80 @@ body {
   background: var(--bg-elevated);
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-sm);
+=======
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-medium);
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+  color: var(--text-white);
+}
+.btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-sm { padding: 3px 8px; font-size: 10.5px; }
+
+.btn-primary {
+  background: rgba(3, 105, 161, 0.8);
+  border-color: rgba(56, 189, 248, 0.5);
+  color: #e0f2fe;
+}
+.btn-primary:hover:not(:disabled) {
+  background: rgba(2, 132, 199, 0.9);
+  border-color: var(--cyan);
+  color: #ffffff;
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+/* Forms & Tables */
+.input-control, .select-control {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-family: var(--font-sans);
+}
+.input-control:focus, .select-control:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.1);
+}
+
+.data-table, .eng-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.data-table th, .eng-table th {
+  text-align: left;
+  padding: 7px 10px;
+  background: rgba(0,0,0,0.2);
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
   color: var(--text-secondary);
   font-size: 11px;
   font-weight: 600;
+<<<<<<< HEAD
   padding: 3px 9px;
   cursor: pointer;
   transition: all 0.12s;
@@ -768,8 +2178,23 @@ body {
   min-height: 400px;
   height: 100%;
   background: radial-gradient(circle at 45% 45%, #14243A 0%, #07111F 85%);
+=======
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
 }
+.data-table td, .eng-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  vertical-align: middle;
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
+}
+.data-table tbody tr:hover td, .eng-table tbody tr:hover td { background: rgba(56, 189, 248, 0.03); }
+.data-table tbody tr.selected td, .eng-table tbody tr.selected td { background: rgba(56, 189, 248, 0.06); }
 
+<<<<<<< HEAD
 /* Floating Vertical Toolbar on Left */
 .floating-3d-toolbar {
   position: absolute;
@@ -1297,6 +2722,98 @@ body {
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
+=======
+/* Utilities */
+.mono { font-family: var(--font-mono); }
+.text-nominal  { color: var(--color-nominal); }
+.text-caution  { color: var(--color-caution); }
+.text-warning  { color: var(--color-warning); }
+.text-critical { color: var(--color-critical); }
+.text-cyan     { color: var(--cyan); }
+.text-muted    { color: var(--text-muted); }
+.text-secondary{ color: var(--text-secondary); }
+
+/* Recharts Overrides */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-medium) !important;
+  border-radius: 4px !important;
+  padding: 6px 10px !important;
+  font-size: 11px;
+}
+.recharts-cartesian-axis-tick-value { fill: var(--text-secondary); font-size: 10px; }
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line { stroke: var(--border-subtle); }
+
+/* Animation */
+.loading-pulse { animation: pulse-opacity 1.5s ease-in-out infinite; }
+@keyframes pulse-opacity {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+/* Mobile trigger */
+.mobile-nav-trigger {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 5px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+/* =========================================================================
+   RESPONSIVE LAYOUT
+   ========================================================================= */
+@media (max-width: 1400px) {
+  .cmd-mid-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .twin-3d-box {
+    grid-column: 1 / -1;
+  }
+  .cmd-bot-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .recent-alerts-card {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1100px) {
+  .cmd-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .topbar-center {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  :root { --topbar-h: 46px; }
+  .workstation-body {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    display: none;
+  }
+  .mobile-nav-trigger {
+    display: flex;
+  }
+  .cmd-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .cmd-mid-grid {
+    grid-template-columns: 1fr;
+  }
+  .cmd-bot-grid {
+    grid-template-columns: 1fr;
+  }
+  .viewport-content {
+    padding: 10px 12px;
+  }
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
 }
 
 /* =========================================================================

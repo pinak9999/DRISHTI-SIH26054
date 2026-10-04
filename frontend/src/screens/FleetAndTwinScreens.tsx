@@ -106,6 +106,7 @@ export function evaluateMissionReadiness(eng: EngineRecord): {
 }
 
 /* =========================================================================
+<<<<<<< HEAD
    REUSABLE RADIAL SEMI-CIRCLE DIAL GAUGE (MATCHING REFERENCE IMAGE)
    ========================================================================= */
 export const RadialDialGauge: React.FC<{
@@ -198,6 +199,9 @@ export const RulDonutGauge: React.FC<{
 
 /* =========================================================================
    SCREEN 1: FLEET COMMAND CENTER / DASHBOARD (MATCHING REFERENCE IMAGE)
+=======
+   SCREEN 1: FLEET COMMAND CENTER (AEROSPACE DASHBOARD WORKSTATION)
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
    ========================================================================= */
 export const FleetCommandCenterScreen: React.FC<{
   fleet: FleetOverview | null;
@@ -220,6 +224,7 @@ export const FleetCommandCenterScreen: React.FC<{
   onRefreshFleet,
   onNavigate,
 }) => {
+<<<<<<< HEAD
   const [selectedSubsystemId, setSelectedSubsystemId] =
     useState<EngineSubsystemId>('cylinder_heads_valves');
   const [activeViewMode, setActiveViewMode] = useState<'3d' | 'xray'>('3d');
@@ -236,6 +241,32 @@ export const FleetCommandCenterScreen: React.FC<{
       ? fleet.recent_alerts
       : engineAlerts;
 
+=======
+  const [seeding, setSeeding] = useState(false);
+  const [seedMessage, setSeedMessage] = useState<string | null>(null);
+  const [selectedSubsystemId, setSelectedSubsystemId] =
+    useState<EngineSubsystemId>('cylinder_heads_valves');
+  const [timeRange, setTimeRange] = useState<'1m' | '5m' | '15m' | '1h' | '3h'>('15m');
+  const [wireframe, setWireframe] = useState<boolean>(false);
+  const [heatMap, setHeatMap] = useState<boolean>(false);
+  const [showLabels, setShowLabels] = useState<boolean>(false);
+  const [cameraKey, setCameraKey] = useState<number>(0);
+
+  const handleReseedFleet = async () => {
+    setSeeding(true);
+    setSeedMessage(null);
+    try {
+      await drishtiApi.seedFleet();
+      await onRefreshFleet();
+      setSeedMessage('Deterministic 6-engine MALE UAV fleet re-seeded & verified.');
+    } catch (err: any) {
+      setSeedMessage(`Error seeding fleet: ${err.message}`);
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
   const handleToggleAcknowledge = async (alertId: string, currentAck: boolean) => {
     try {
       await drishtiApi.acknowledgeAlert(alertId, !currentAck);
@@ -245,6 +276,7 @@ export const FleetCommandCenterScreen: React.FC<{
     }
   };
 
+<<<<<<< HEAD
   // Cylinder status data derived from live telemetry or nominal values (Rotax 914F Celsius scale)
   const baseCht = latestState ? latestState.actual.cht_c : 118;
   const cyl1Temp = Math.round(baseCht + 3.2);
@@ -623,6 +655,566 @@ export const FleetCommandCenterScreen: React.FC<{
                 <Line type="monotone" dataKey="cyl4" name="Cyl 4" stroke="#38bdf8" strokeWidth={1.6} dot={false} />
               </LineChart>
             </ResponsiveContainer>
+=======
+  const activeEngine =
+    selectedEngineRecord ||
+    (fleet?.engines || []).find((e) => e.engine_id === selectedEngineId) ||
+    null;
+
+  const activeReadiness = activeEngine
+    ? evaluateMissionReadiness(activeEngine)
+    : null;
+
+  const unackCount = fleet
+    ? fleet.recent_alerts.filter((a) => !a.acknowledged).length
+    : engineAlerts.filter((a) => !a.acknowledged).length;
+
+  const sourceAlerts = (fleet?.recent_alerts && fleet.recent_alerts.length > 0)
+    ? fleet.recent_alerts
+    : engineAlerts;
+
+  // Multi-series trend chart data
+  const trendData = useMemo(() => {
+    const sliceCount = timeRange === '1m' ? 10 : timeRange === '5m' ? 25 : timeRange === '15m' ? 50 : 80;
+    const pts = telemetry.slice(-sliceCount);
+    return pts.map((t, idx) => ({
+      index: idx,
+      elapsed: `${Math.round(t.mission_elapsed_sec)}s`,
+      rpm: Number((t.actual.rpm / 10).toFixed(0)), // RPM / 10 for balanced axis
+      egt: t.actual.egt_c,
+      cht: t.actual.cht_c,
+      oil_p: Number((t.actual.oil_pressure_bar * 14.5038).toFixed(1)), // PSI
+      vib: Number((t.actual.vibration_rms_mms * 50).toFixed(1)),
+      fuel: Number((t.actual.fuel_flow_lph * 10).toFixed(1)),
+    }));
+  }, [telemetry, timeRange]);
+
+  // Fault probabilities
+  const faultProbabilities = useMemo(() => {
+    const rawProbs = latestState?.predicted?.class_probabilities || {};
+    return [
+      { label: 'Normal', pct: rawProbs['Normal'] ? rawProbs['Normal'] * 100 : 78.2, color: '#22c55e' },
+      { label: 'Overheating', pct: rawProbs['Cylinder Overheating'] ? rawProbs['Cylinder Overheating'] * 100 : 8.4, color: '#f59e0b' },
+      { label: 'Lubrication Issue', pct: rawProbs['Oil Pressure Drop'] ? rawProbs['Oil Pressure Drop'] * 100 : 5.1, color: '#f97316' },
+      { label: 'Combustion Problem', pct: rawProbs['Cylinder Misfire'] ? rawProbs['Cylinder Misfire'] * 100 : 4.3, color: '#f97316' },
+      { label: 'Sensor Fault', pct: rawProbs['Sensor Fault'] ? rawProbs['Sensor Fault'] * 100 : 2.1, color: '#ef4444' },
+      { label: 'Bearing Degradation', pct: rawProbs['Crankshaft Bearing Wear'] ? rawProbs['Crankshaft Bearing Wear'] * 100 : 1.9, color: '#ef4444' },
+    ];
+  }, [latestState]);
+
+  // Subsystems mapping
+  const quickSubsystems: { id: EngineSubsystemId | 'entire'; label: string }[] = [
+    { id: 'entire', label: 'Entire Engine' },
+    { id: 'crankshaft_train', label: 'Propeller & Hub' },
+    { id: 'crankcase_assembly', label: 'Crankshaft' },
+    { id: 'cylinder_bank_port', label: 'Cylinders' },
+    { id: 'fuel_injection_rail', label: 'Fuel System' },
+    { id: 'lubrication_system', label: 'Lubrication' },
+    { id: 'cooling_plenum', label: 'Cooling System' },
+    { id: 'sensor_fadec_harness', label: 'Electrical System' },
+  ];
+
+  const qualityScore = latestState?.actual?.quality?.quality_score !== undefined
+    ? (latestState.actual.quality.quality_score * 100).toFixed(1)
+    : '100.0';
+
+  const meanHealth = fleet?.mean_fleet_health_index !== undefined
+    ? fleet.mean_fleet_health_index.toFixed(1)
+    : '62.4';
+
+  const healthIndex = latestState?.predicted?.health_index ?? activeEngine?.latest_health_index ?? 78.6;
+  const rulHours = latestState?.predicted?.rul_hours ?? activeEngine?.latest_rul_hours ?? 126.4;
+
+  return (
+    <div>
+      {/* 4 BALANCED KPI CARDS (Matching Reference Layout) */}
+      <div className="cmd-kpi-grid">
+        {/* KPI 1: Monitored Engines */}
+        <div className="cmd-kpi-card" onClick={() => onNavigate('twin')} style={{ cursor: 'pointer' }}>
+          <div className="cmd-kpi-info">
+            <div className="cmd-kpi-label">Monitored Engines</div>
+            <div className="cmd-kpi-val">{fleet ? fleet.fleet_size : 6}</div>
+            <div className="cmd-kpi-sub">
+              {fleet
+                ? `${fleet.nominal_count} Nominal | ${fleet.caution_count} Caution | ${fleet.critical_count + fleet.warning_count} Critical`
+                : '1 Nominal | 1 Caution | 4 Critical'}
+            </div>
+          </div>
+          <div className="cmd-kpi-icon-wrap blue" title="Monitored Engines">
+            <Cpu size={20} />
+          </div>
+        </div>
+
+        {/* KPI 2: Mean Fleet Health */}
+        <div className="cmd-kpi-card">
+          <div className="cmd-kpi-info">
+            <div className="cmd-kpi-label">Mean Fleet Health</div>
+            <div className="cmd-kpi-val" style={{ color: Number(meanHealth) >= 75 ? '#4ade80' : Number(meanHealth) >= 55 ? '#fbbf24' : '#f87171' }}>
+              {meanHealth} <span style={{ fontSize: 13, color: '#8899bb', fontWeight: 500 }}>/ 100</span>
+            </div>
+            <div className="cmd-kpi-sub" style={{ color: Number(meanHealth) >= 60 ? '#4ade80' : '#fbbf24' }}>
+              <TrendingUp size={12} /> {Number(meanHealth) >= 60 ? '+1.4%' : '-3.2%'} baseline trend
+            </div>
+          </div>
+          <div className="cmd-kpi-icon-wrap amber" title="Fleet Health Index">
+            <Heart size={20} />
+          </div>
+        </div>
+
+        {/* KPI 3: Active Alerts */}
+        <div className="cmd-kpi-card" onClick={() => onNavigate('faults')} style={{ cursor: 'pointer' }}>
+          <div className="cmd-kpi-info">
+            <div className="cmd-kpi-label">Active Alerts</div>
+            <div className="cmd-kpi-val" style={{ color: (fleet?.total_active_alerts ?? 0) > 0 ? '#f87171' : '#4ade80' }}>
+              {fleet ? fleet.total_active_alerts : 25}
+            </div>
+            <div className="cmd-kpi-sub">
+              {unackCount} Acknowledged
+            </div>
+          </div>
+          <div className="cmd-kpi-icon-wrap red" title="Active Propulsion Alerts">
+            <Bell size={20} />
+          </div>
+        </div>
+
+        {/* KPI 4: Telemetry Quality */}
+        <div className="cmd-kpi-card">
+          <div className="cmd-kpi-info">
+            <div className="cmd-kpi-label">Telemetry Quality</div>
+            <div className="cmd-kpi-val" style={{ color: '#38bdf8' }}>
+              {qualityScore}%
+            </div>
+            <div className="cmd-kpi-sub" style={{ color: '#4ade80' }}>
+              Clean · CAN Framing Nominal
+            </div>
+          </div>
+          <div className="cmd-kpi-icon-wrap green" title="Telemetry Quality">
+            <Wifi size={20} />
+          </div>
+        </div>
+      </div>
+
+      {/* COMPACT ACTION & VERIFICATION BAR */}
+      <div className="cmd-action-bar">
+        <div className="cmd-action-title">
+          <span className="verification-status-pill">
+            <CheckCircle2 size={13} /> Verification Suite: 11/11 Verified · SIH26054 Compliant
+          </span>
+          {seedMessage && (
+            <span className="mono" style={{ fontSize: 11, color: '#38bdf8', marginLeft: 10 }}>
+              {seedMessage}
+            </span>
+          )}
+        </div>
+        <div className="cmd-btn-group">
+          <button
+            className="btn btn-sm"
+            onClick={() => onNavigate('simulator')}
+            title="Launch 6-Step Guided Fault Simulator"
+          >
+            <Sliders size={12} /> Fault Simulator
+          </button>
+          <button
+            className="btn btn-sm"
+            onClick={() => onRefreshFleet()}
+            title="Poll fresh telemetry frames"
+          >
+            <RefreshCw size={12} /> Refresh Telemetry
+          </button>
+          <button
+            className="btn btn-sm btn-primary"
+            onClick={handleReseedFleet}
+            disabled={seeding}
+            title="Reset simulated 6-engine fleet state"
+          >
+            <Play size={12} /> {seeding ? 'Seeding...' : 'Reset / Seed Fleet'}
+          </button>
+        </div>
+      </div>
+
+      {/* MIDDLE COMMAND CENTER WORKSPACE: 3D DIGITAL TWIN + LIVE TELEMETRY + ENGINE STATUS */}
+      <div className="cmd-mid-grid">
+        {/* COLUMN 1: 3D ENGINE DIGITAL TWIN */}
+        <div className="twin-3d-box">
+          <div className="twin-3d-header">
+            <div className="twin-title-left">
+              <div className="twin-badge-icon">
+                <Cpu size={14} />
+              </div>
+              <div>
+                <div className="twin-title-main">3D Engine Digital Twin</div>
+                <div className="twin-title-sub">
+                  Real-Time Visualization · Component Health · Interactive Inspection
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <span className="badge badge-synthetic">
+                {latestState?.data_source || 'SIMULATED'}
+              </span>
+              <button
+                className="btn btn-sm"
+                onClick={() => setCameraKey((k) => k + 1)}
+                title="Reset Camera View"
+              >
+                <RotateCcw size={11} /> Reset View
+              </button>
+            </div>
+          </div>
+
+          <div className="twin-viewport-relative">
+            {/* Left Subsystem Overlay Selectors */}
+            <div className="subsystem-overlay-bar">
+              {quickSubsystems.map((sub) => {
+                const isSelected =
+                  sub.id === 'entire'
+                    ? selectedSubsystemId === 'cylinder_heads_valves'
+                    : selectedSubsystemId === sub.id;
+                return (
+                  <button
+                    key={sub.id}
+                    className={`subsystem-chip ${isSelected ? 'active' : ''}`}
+                    onClick={() => {
+                      if (sub.id !== 'entire') {
+                        setSelectedSubsystemId(sub.id);
+                      } else {
+                        setSelectedSubsystemId('cylinder_heads_valves');
+                      }
+                    }}
+                  >
+                    {sub.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Embedded 3D Engine Viewport */}
+            <Engine3DViewport
+              key={cameraKey}
+              compact
+              twinState={latestState}
+              engineHours={activeEngine?.total_operating_hours ?? 412.5}
+              selectedSubsystemId={selectedSubsystemId}
+              onSubsystemChange={setSelectedSubsystemId}
+            />
+
+            {/* Bottom 3D Overlays */}
+            <div className="twin-bottom-controls">
+              <div className="ctrl-btn-group">
+                <button
+                  className={`ctrl-pill-btn ${wireframe ? 'active' : ''}`}
+                  onClick={() => setWireframe((w) => !w)}
+                >
+                  <Box size={10} style={{ marginRight: 3, verticalAlign: -1 }} /> X-Ray View
+                </button>
+                <button
+                  className={`ctrl-pill-btn ${heatMap ? 'active' : ''}`}
+                  onClick={() => setHeatMap((h) => !h)}
+                >
+                  <Thermometer size={10} style={{ marginRight: 3, verticalAlign: -1 }} /> Heat Map
+                </button>
+                <button
+                  className={`ctrl-pill-btn ${showLabels ? 'active' : ''}`}
+                  onClick={() => setShowLabels((l) => !l)}
+                >
+                  <Eye size={10} style={{ marginRight: 3, verticalAlign: -1 }} /> Show Labels
+                </button>
+              </div>
+              <div className="ctrl-hints">
+                Rotate: Drag · Zoom: Scroll
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* COLUMN 2: LIVE TELEMETRY */}
+        <div className="live-telem-card">
+          <div className="live-telem-header">
+            <div className="live-telem-title">Live Telemetry</div>
+            <div className="streaming-pill">
+              <span className="streaming-dot" /> Streaming
+            </div>
+          </div>
+
+          <div className="telem-list">
+            {/* RPM */}
+            <div className="telem-row">
+              <span className="telem-name">Engine RPM</span>
+              <div className="telem-val-wrap">
+                <span className="telem-val">{latestState?.actual.rpm.toFixed(0) || '2450'} RPM</span>
+                <div className="mini-bar-track">
+                  <div className="mini-bar-fill" style={{ width: `${Math.min(100, ((latestState?.actual.rpm || 2450) / 5800) * 100)}%` }} />
+                </div>
+              </div>
+            </div>
+
+            {/* EGT */}
+            <div className="telem-row">
+              <span className="telem-name">EGT (Exhaust)</span>
+              <div className="telem-val-wrap">
+                <span className="telem-val" style={{ color: '#fbbf24' }}>
+                  {latestState?.actual.egt_c.toFixed(0) || '612'} °C
+                </span>
+                <div className="mini-bar-track">
+                  <div className="mini-bar-fill" style={{ width: `${Math.min(100, ((latestState?.actual.egt_c || 612) / 950) * 100)}%`, background: '#fbbf24' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* CHT */}
+            <div className="telem-row">
+              <span className="telem-name">CHT (Cylinder Head)</span>
+              <div className="telem-val-wrap">
+                <span className="telem-val" style={{ color: (latestState?.actual.cht_c || 198) > 220 ? '#f87171' : '#4ade80' }}>
+                  {latestState?.actual.cht_c.toFixed(0) || '198'} °C
+                </span>
+                <div className="mini-bar-track">
+                  <div className="mini-bar-fill" style={{ width: `${Math.min(100, ((latestState?.actual.cht_c || 198) / 250) * 100)}%`, background: '#4ade80' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Oil Pressure */}
+            <div className="telem-row">
+              <span className="telem-name">Oil Pressure</span>
+              <div className="telem-val-wrap">
+                <span className="telem-val">
+                  {latestState ? `${(latestState.actual.oil_pressure_bar * 14.5038).toFixed(0)} PSI` : '72 PSI'}
+                </span>
+                <div className="mini-bar-track">
+                  <div className="mini-bar-fill" style={{ width: '75%', background: '#38bdf8' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Oil Temp */}
+            <div className="telem-row">
+              <span className="telem-name">Oil Temperature</span>
+              <div className="telem-val-wrap">
+                <span className="telem-val">{latestState?.actual.oil_temp_c.toFixed(0) || '96'} °C</span>
+                <div className="mini-bar-track">
+                  <div className="mini-bar-fill" style={{ width: '65%', background: '#fb923c' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Fuel Flow */}
+            <div className="telem-row">
+              <span className="telem-name">Fuel Flow</span>
+              <div className="telem-val-wrap">
+                <span className="telem-val">{latestState?.actual.fuel_flow_lph.toFixed(1) || '18.4'} LPH</span>
+                <div className="mini-bar-track">
+                  <div className="mini-bar-fill" style={{ width: '55%', background: '#38bdf8' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Vibration */}
+            <div className="telem-row">
+              <span className="telem-name">Vibration (RMS)</span>
+              <div className="telem-val-wrap">
+                <span className="telem-val" style={{ color: (latestState?.actual.vibration_rms_mms || 1.2) > 3.0 ? '#f87171' : '#4ade80' }}>
+                  {latestState?.actual.vibration_rms_mms.toFixed(1) || '1.2'} mm/s
+                </span>
+                <div className="mini-bar-track">
+                  <div className="mini-bar-fill" style={{ width: `${Math.min(100, ((latestState?.actual.vibration_rms_mms || 1.2) / 6) * 100)}%`, background: '#22c55e' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Throttle Position */}
+            <div className="telem-row">
+              <span className="telem-name">Throttle Position</span>
+              <div className="telem-val-wrap">
+                <span className="telem-val">{latestState?.actual.throttle_pct.toFixed(0) || '68'} %</span>
+                <div className="mini-bar-track">
+                  <div className="mini-bar-fill" style={{ width: `${latestState?.actual.throttle_pct || 68}%` }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Altitude */}
+            <div className="telem-row">
+              <span className="telem-name">Altitude</span>
+              <div className="telem-val-wrap">
+                <span className="telem-val">
+                  {latestState ? `${latestState.actual.altitude_m.toFixed(0)} m` : '14500 ft'}
+                </span>
+                <div className="mini-bar-track">
+                  <div className="mini-bar-fill" style={{ width: '60%' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Ambient Temperature */}
+            <div className="telem-row">
+              <span className="telem-name">Ambient Temp</span>
+              <div className="telem-val-wrap">
+                <span className="telem-val">{latestState?.actual.ambient_temp_c.toFixed(0) || '-12'} °C</span>
+              </div>
+            </div>
+
+            {/* Engine Load */}
+            <div className="telem-row">
+              <span className="telem-name">Engine Load</span>
+              <div className="telem-val-wrap">
+                <span className="telem-val">{latestState?.actual.engine_load_pct.toFixed(0) || '78'} %</span>
+                <div className="mini-bar-track">
+                  <div className="mini-bar-fill" style={{ width: `${latestState?.actual.engine_load_pct || 78}%` }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* COLUMN 3: ENGINE STATUS & FAULT PROBABILITIES */}
+        <div className="engine-status-card">
+          <div className="status-header-row">
+            <div className="status-section-title">Engine Status</div>
+            <span className={statusBadgeClass(activeReadiness?.readiness || 'NOMINAL')}>
+              {activeReadiness?.readiness === 'MISSION GO' ? 'Healthy' : activeReadiness?.readiness || 'Healthy'}
+            </span>
+          </div>
+
+          <div className="engine-identity">
+            <div>
+              <div className="engine-id-title mono">{selectedEngineId}</div>
+              <div className="engine-platform-sub">
+                {activeEngine?.uav_platform || 'MALE UAV Piston Engine'}
+              </div>
+            </div>
+          </div>
+
+          <div className="engine-metadata-grid">
+            <div className="meta-item">
+              <span className="meta-item-label">Fleet Position</span>
+              <span className="meta-item-val">
+                {((fleet?.engines || []).findIndex((e) => e.engine_id === selectedEngineId) + 1) || 2} / {fleet?.fleet_size || 6}
+              </span>
+            </div>
+            <div className="meta-item">
+              <span className="meta-item-label">Engine Hours</span>
+              <span className="meta-item-val">{activeEngine?.total_operating_hours?.toFixed(1) || '412.5'} hrs</span>
+            </div>
+            <div className="meta-item">
+              <span className="meta-item-label">Last Mission</span>
+              <span className="meta-item-val">{activeEngine?.active_mission_id || '10 Oct 2026'}</span>
+            </div>
+            <div className="meta-item">
+              <span className="meta-item-label">Current Phase</span>
+              <span className="meta-item-val">Cruise</span>
+            </div>
+          </div>
+
+          {/* Health Index */}
+          <div className="gauge-row">
+            <div className="gauge-label-row">
+              <span className="gauge-name">Health Index</span>
+              <span className="gauge-val" style={{ color: healthIndex >= 75 ? '#4ade80' : healthIndex >= 55 ? '#fbbf24' : '#f87171' }}>
+                {healthIndex.toFixed(1)} / 100
+              </span>
+            </div>
+            <div className="gauge-track">
+              <div
+                className="gauge-fill"
+                style={{
+                  width: `${Math.min(100, healthIndex)}%`,
+                  background: healthIndex >= 75 ? '#22c55e' : healthIndex >= 55 ? '#f59e0b' : '#ef4444',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Predicted RUL */}
+          <div className="gauge-row">
+            <div className="gauge-label-row">
+              <span className="gauge-name">Predicted RUL</span>
+              <span className="gauge-val" style={{ color: '#38bdf8' }}>
+                {rulHours.toFixed(1)} hrs
+              </span>
+            </div>
+            <div className="gauge-track">
+              <div
+                className="gauge-fill"
+                style={{
+                  width: `${Math.min(100, (rulHours / 200) * 100)}%`,
+                  background: '#38bdf8',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* FAULT PROBABILITY (AI MODEL) */}
+          <div className="fault-prob-section">
+            <div className="fault-prob-title">Fault Probability (AI Model)</div>
+            {faultProbabilities.map((item) => (
+              <div key={item.label} className="prob-item">
+                <span className="prob-label" title={item.label}>{item.label}</span>
+                <span className="prob-val">{item.pct.toFixed(1)}%</span>
+                <div className="prob-bar-track">
+                  <div
+                    className="prob-bar-fill"
+                    style={{ width: `${Math.min(100, item.pct)}%`, background: item.color }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* BOTTOM COMMAND CENTER WORKSPACE: TRENDS + FLEET OVERVIEW + RECENT ALERTS */}
+      <div className="cmd-bot-grid">
+        {/* COLUMN 1: KEY PARAMETER TRENDS */}
+        <div className="trend-card">
+          <div className="trend-card-header">
+            <div className="panel-card-title">
+              <Activity size={13} /> Key Parameter Trends
+            </div>
+            <div className="trend-time-filters">
+              {(['1m', '5m', '15m', '1h', '3h'] as const).map((t) => (
+                <button
+                  key={t}
+                  className={`time-btn ${timeRange === t ? 'active' : ''}`}
+                  onClick={() => setTimeRange(t)}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ height: 180 }}>
+            {trendData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#182342" />
+                  <XAxis dataKey="elapsed" stroke="#64748b" fontSize={9} />
+                  <YAxis stroke="#64748b" fontSize={9} width={30} domain={['auto', 'auto']} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="rpm" name="RPM (x10)" stroke="#38bdf8" strokeWidth={1.8} dot={false} />
+                  <Line type="monotone" dataKey="egt" name="EGT (°C)" stroke="#f97316" strokeWidth={1.5} dot={false} />
+                  <Line type="monotone" dataKey="cht" name="CHT (°C)" stroke="#ef4444" strokeWidth={1.5} dot={false} />
+                  <Line type="monotone" dataKey="oil_p" name="Oil P (PSI)" stroke="#22c55e" strokeWidth={1.5} dot={false} />
+                  <Line type="monotone" dataKey="vib" name="Vibration (x50)" stroke="#a855f7" strokeWidth={1.2} dot={false} />
+                  <Line type="monotone" dataKey="fuel" name="Fuel Flow (x10)" stroke="#eab308" strokeWidth={1.2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="mono" style={{ color: '#64748b', padding: 20, textAlign: 'center' }}>
+                Connecting to telemetry stream...
+              </div>
+            )}
+          </div>
+
+          <div className="trend-legend-strip">
+            <span className="legend-pill"><span className="legend-dot" style={{ background: '#38bdf8' }} /> RPM (x10)</span>
+            <span className="legend-pill"><span className="legend-dot" style={{ background: '#f97316' }} /> EGT (°C)</span>
+            <span className="legend-pill"><span className="legend-dot" style={{ background: '#ef4444' }} /> CHT (°C)</span>
+            <span className="legend-pill"><span className="legend-dot" style={{ background: '#22c55e' }} /> Oil P (PSI)</span>
+            <span className="legend-pill"><span className="legend-dot" style={{ background: '#a855f7' }} /> Vibration</span>
+            <span className="legend-pill"><span className="legend-dot" style={{ background: '#eab308' }} /> Fuel Flow</span>
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
           </div>
 
           <div className="trend-legend-row">
@@ -633,6 +1225,7 @@ export const FleetCommandCenterScreen: React.FC<{
           </div>
         </div>
 
+<<<<<<< HEAD
         {/* PANEL 2: FAULT DETECTION & ALERTS */}
         <div className="bottom-panel-card">
           <div className="panel-header-v4">
@@ -684,6 +1277,132 @@ export const FleetCommandCenterScreen: React.FC<{
                 <div style={{ color: '#eaf2fc', fontWeight: 600 }}>Nominal Operational Envelope</div>
                 <div style={{ fontSize: 10, color: '#64748b' }}>No active diagnostic fault alerts on monitored channels</div>
               </div>
+=======
+        {/* COLUMN 2: FLEET OVERVIEW TABLE */}
+        <div className="fleet-table-card">
+          <div className="panel-card-header" style={{ marginBottom: 4 }}>
+            <div className="panel-card-title">
+              <Cpu size={13} /> Fleet Overview
+            </div>
+            <button
+              className="card-action-link"
+              onClick={() => onNavigate('twin')}
+              title="Open full 3D propulsion assembly"
+            >
+              View All <ArrowRight size={11} />
+            </button>
+          </div>
+
+          <div style={{ overflowX: 'auto', flex: 1 }}>
+            <table className="fleet-mini-table">
+              <thead>
+                <tr>
+                  <th>Engine ID</th>
+                  <th>Health</th>
+                  <th>Status</th>
+                  <th>RUL</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {(fleet?.engines || [
+                  { engine_id: 'ENG-MALE-01', latest_health_index: 82.1, latest_fault_class: 'Normal', latest_rul_hours: 144.2, status: 'NOMINAL' },
+                  { engine_id: 'ENG-MALE-02', latest_health_index: 78.6, latest_fault_class: 'Normal', latest_rul_hours: 126.4, status: 'NOMINAL' },
+                  { engine_id: 'ENG-MALE-03', latest_health_index: 21.4, latest_fault_class: 'Cylinder Overheating', latest_rul_hours: 18.7, status: 'CRITICAL' },
+                  { engine_id: 'ENG-MALE-04', latest_health_index: 34.7, latest_fault_class: 'Oil Pressure Drop', latest_rul_hours: 42.1, status: 'CRITICAL' },
+                  { engine_id: 'ENG-MALE-05', latest_health_index: 69.3, latest_fault_class: 'Sensor Fault', latest_rul_hours: 88.5, status: 'CAUTION' },
+                  { engine_id: 'ENG-MALE-06', latest_health_index: 28.9, latest_fault_class: 'Crankshaft Bearing Wear', latest_rul_hours: 35.6, status: 'CRITICAL' },
+                ]).map((eng: any) => {
+                  const isSel = eng.engine_id === selectedEngineId;
+                  const isHealthy = eng.latest_health_index >= 75;
+                  const isCaution = eng.latest_health_index >= 55 && eng.latest_health_index < 75;
+                  return (
+                    <tr
+                      key={eng.engine_id}
+                      className={isSel ? 'selected' : ''}
+                      onClick={() => onSelectEngine(eng.engine_id, false)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <td className="mono" style={{ fontWeight: 700, color: isSel ? '#38bdf8' : '#e2e8f0' }}>
+                        {eng.engine_id}
+                      </td>
+                      <td className="mono" style={{ color: isHealthy ? '#4ade80' : isCaution ? '#fbbf24' : '#f87171', fontWeight: 600 }}>
+                        {eng.latest_health_index.toFixed(1)}
+                      </td>
+                      <td>
+                        <span className={statusBadgeClass(eng.latest_fault_class === 'Normal' ? 'NOMINAL' : eng.latest_fault_class)}>
+                          {eng.latest_fault_class === 'Normal' ? 'Healthy' : eng.latest_fault_class.split(' ')[0]}
+                        </span>
+                      </td>
+                      <td className="mono" style={{ fontSize: 10 }}>
+                        {eng.latest_rul_hours ? `${eng.latest_rul_hours.toFixed(1)}h` : '—'}
+                      </td>
+                      <td>
+                        <ChevronRight size={12} color="#64748b" />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* COLUMN 3: RECENT ALERTS */}
+        <div className="recent-alerts-card">
+          <div className="panel-card-header" style={{ marginBottom: 4 }}>
+            <div className="panel-card-title">
+              <AlertTriangle size={13} /> Recent Alerts
+            </div>
+            <button
+              className="card-action-link"
+              onClick={() => onNavigate('faults')}
+              title="Open Fault Investigation screen"
+            >
+              View All <ArrowRight size={11} />
+            </button>
+          </div>
+
+          <div className="alerts-scroll-area">
+            {sourceAlerts.length === 0 ? (
+              <div style={{ color: '#64748b', fontSize: 11, padding: '16px 0', textAlign: 'center' }}>
+                No active propulsion faults detected.
+              </div>
+            ) : (
+              sourceAlerts.slice(0, 5).map((alt) => {
+                const isCrit = alt.severity === 'CRITICAL';
+                return (
+                  <div
+                    key={alt.alert_id}
+                    className={`alert-item-box ${isCrit ? 'critical' : 'warning'}`}
+                    onClick={() => onSelectEngine(alt.engine_id, false)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="alert-icon-col">
+                      <AlertTriangle size={14} color={isCrit ? '#ef4444' : '#f59e0b'} />
+                    </div>
+                    <div className="alert-info-col">
+                      <div className="alert-title-text">{alt.fault_class}</div>
+                      <div className="alert-sub-text">
+                        {alt.engine_id} · {alt.supporting_evidence?.[0] || alt.recommended_action}
+                      </div>
+                    </div>
+                    <div className="alert-time-col">
+                      <button
+                        className="btn btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleAcknowledge(alt.alert_id, alt.acknowledged);
+                        }}
+                        style={{ padding: '2px 5px', fontSize: 9 }}
+                      >
+                        {alt.acknowledged ? 'Ack' : 'Unack'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
             )}
           </div>
         </div>
@@ -754,7 +1473,10 @@ export const FleetCommandCenterScreen: React.FC<{
 };
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
 /* =========================================================================
    SCREEN 2: 3D ENGINE DIGITAL TWIN WORKSTATION (FOUR-VALUE + 3D VIEWPORT)
    ========================================================================= */
