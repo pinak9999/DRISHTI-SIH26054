@@ -6,32 +6,62 @@ import {
   ReplaySnapshot,
 } from '../types/telemetry';
 
-const API_BASE =
-  (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+// Determine the API base URL:
+// 1. Explicit Vite env var if provided (e.g. VITE_API_BASE_URL)
+// 2. If running in browser on localhost/127.0.0.1 -> local FastAPI port 8000
+// 3. Otherwise (e.g. deployed on Vercel) -> live Render production backend
+export const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1')
+    ? 'http://127.0.0.1:8000'
+    : 'https://drishti-sih26054.onrender.com');
 
-async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
+async function requestJson<T>(
+  path: string,
+  options?: RequestInit,
+  timeoutMs = 15000
+): Promise<T> {
   const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
-  const res = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options?.headers || {}),
-    },
-    ...options,
-  });
-  if (!res.ok) {
-    let detail = `HTTP ${res.status}`;
-    try {
-      const errBody = await res.json();
-      detail = errBody.detail || JSON.stringify(errBody);
-    } catch {
-      // ignore json parse failure
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options?.headers || {}),
+      },
+      signal: controller.signal,
+      ...options,
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`;
+      try {
+        const errBody = await res.json();
+        detail = errBody.detail || JSON.stringify(errBody);
+      } catch {
+        // ignore json parse failure
+      }
+      throw new Error(detail);
     }
-    throw new Error(detail);
+    return (await res.json()) as T;
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error(
+        `Request to ${path} timed out after ${timeoutMs / 1000}s. Backend might be cold-starting on Render.`
+      );
+    }
+    throw err;
   }
-  return res.json() as Promise<T>;
 }
 
 export const drishtiApi = {
+  getBaseUrl: () => API_BASE,
   getHealth: () => requestJson<Record<string, any>>('/health'),
   getReadiness: () => requestJson<Record<string, any>>('/ready'),
   getHealthPolicy: () =>

@@ -778,11 +778,14 @@ class WebGLErrorBoundary extends React.Component<
 }
 
 function isWebGLSupported(): boolean {
+  if (typeof window === 'undefined') return false;
   try {
     const canvas = document.createElement('canvas');
     return !!(
       window.WebGLRenderingContext &&
-      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+      (canvas.getContext('webgl2') ||
+        canvas.getContext('webgl') ||
+        canvas.getContext('experimental-webgl'))
     );
   } catch {
     return false;
@@ -796,11 +799,34 @@ export const Engine3DViewport: React.FC<{
   twinState: FourValueDigitalTwinState | null;
   engineHours?: number;
   compact?: boolean;
-}> = ({ twinState, engineHours = 420.0, compact = false }) => {
-  const [selectedSubsystem, setSelectedSubsystem] =
+  wireframe?: boolean;
+  showControls?: boolean;
+  selectedSubsystemId?: EngineSubsystemId;
+  onSubsystemChange?: (id: EngineSubsystemId) => void;
+}> = ({
+  twinState,
+  engineHours = 420.0,
+  compact = false,
+  wireframe: controlledWireframe,
+  showControls,
+  selectedSubsystemId,
+  onSubsystemChange,
+}) => {
+  const [internalSubsystem, setInternalSubsystem] =
     useState<EngineSubsystemId>('cylinder_heads_valves');
+  const selectedSubsystem = selectedSubsystemId ?? internalSubsystem;
+
+  const handleSelectSubsystem = (id: EngineSubsystemId) => {
+    setInternalSubsystem(id);
+    if (onSubsystemChange) {
+      onSubsystemChange(id);
+    }
+  };
+
   const [explodeFactor, setExplodeFactor] = useState<number>(0.0);
-  const [wireframe, setWireframe] = useState<boolean>(false);
+  const [internalWireframe, setInternalWireframe] = useState<boolean>(false);
+  const wireframe = controlledWireframe !== undefined ? controlledWireframe : internalWireframe;
+  const setWireframe = setInternalWireframe;
   const [showLabels, setShowLabels] = useState<boolean>(true);
   const [animateKinematics, setAnimateKinematics] = useState<boolean>(true);
   const [cameraResetKey, setCameraResetKey] = useState<number>(0);
@@ -822,18 +848,23 @@ export const Engine3DViewport: React.FC<{
   useEffect(() => {
     if (!twinState) return;
     const fc = twinState.predicted.predicted_fault_class;
+    let nextSub: EngineSubsystemId | null = null;
     if (fc === 'Cylinder Overheating' || fc === 'Valve Clearance Issue') {
-      setSelectedSubsystem('cylinder_heads_valves');
+      nextSub = 'cylinder_heads_valves';
     } else if (fc === 'Oil Pressure Drop') {
-      setSelectedSubsystem('lubrication_system');
+      nextSub = 'lubrication_system';
     } else if (fc === 'Crankshaft Bearing Wear') {
-      setSelectedSubsystem('crankshaft_train');
+      nextSub = 'crankshaft_train';
     } else if (fc === 'Piston Ring Wear' || fc === 'Cylinder Misfire') {
-      setSelectedSubsystem('cylinder_bank_port');
+      nextSub = 'cylinder_bank_port';
     } else if (fc === 'Fuel Injector Clogging') {
-      setSelectedSubsystem('fuel_injection_rail');
+      nextSub = 'fuel_injection_rail';
     } else if (fc === 'Sensor Fault') {
-      setSelectedSubsystem('sensor_fadec_harness');
+      nextSub = 'sensor_fadec_harness';
+    }
+    if (nextSub) {
+      setInternalSubsystem(nextSub);
+      if (onSubsystemChange) onSubsystemChange(nextSub);
     }
   }, [twinState?.predicted.predicted_fault_class]);
 
@@ -862,13 +893,16 @@ export const Engine3DViewport: React.FC<{
       <div className="badge badge-info" style={{ marginBottom: 8 }}>
         2D TECHNICAL SCHEMATIC FALLBACK (WEBGL CONTEXT UNAVAILABLE)
       </div>
+      <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 12, textAlign: 'center' }}>
+        Interactive 2D component selector active. Select any propulsion subsystem below to inspect telemetry and fault state.
+      </div>
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(2, 1fr)',
           gap: 8,
           width: '100%',
-          maxWidth: 520,
+          maxWidth: 540,
         }}
       >
         {ENGINE_SUBSYSTEMS.map((sub) => {
@@ -879,7 +913,7 @@ export const Engine3DViewport: React.FC<{
               className={`comp-tree-btn ${
                 selectedSubsystem === sub.id ? 'selected' : ''
               }`}
-              onClick={() => setSelectedSubsystem(sub.id)}
+              onClick={() => handleSelectSubsystem(sub.id)}
             >
               <span>
                 {sub.code}: {sub.name}
@@ -892,58 +926,160 @@ export const Engine3DViewport: React.FC<{
     </div>
   );
 
+  const shouldShowControls = showControls !== undefined ? showControls : !compact;
+
   if (compact) {
     return (
       <div
         className="twin-canvas-container"
-        style={{ minHeight: 270, marginBottom: 12 }}
+        style={{
+          width: '100%',
+          height: '100%',
+          minHeight: 380,
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+          marginBottom: 0,
+          border: 'none',
+          background: 'transparent',
+          boxShadow: 'none',
+        }}
       >
-        <div className="twin-viewport-hud-top">
-          <div>
-            <span className="badge badge-synthetic">
-              3D PROCEDURAL REFERENCE TWIN (NON-CERTIFIED CAD)
-            </span>
+        {shouldShowControls && (
+          <div className="twin-viewport-hud-top">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                <span className="badge badge-info">
+                  3D PROCEDURAL BOXER TWIN
+                </span>
+                <span className="badge badge-synthetic">
+                  {twinState
+                    ? twinState.is_synthetic
+                      ? 'SYNTHETIC TELEMETRY'
+                      : 'RECORDED TELEMETRY'
+                    : 'AWAITING TELEMETRY'}
+                </span>
+                {twinState && (
+                  <span
+                    className={
+                      twinState.predicted.predicted_fault_class === 'Normal'
+                        ? 'badge badge-nominal'
+                        : twinState.predicted.health_index < 48
+                        ? 'badge badge-critical'
+                        : 'badge badge-warning'
+                    }
+                  >
+                    {twinState.predicted.predicted_fault_class}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+              <button
+                className="btn btn-sm"
+                onClick={() => handleCameraPreset([3.6, 2.2, 3.8])}
+                title="Reset Isometric Camera"
+              >
+                <RotateCcw size={11} /> Iso
+              </button>
+              <button
+                className="btn btn-sm"
+                onClick={() => handleCameraPreset([0, 5.2, 0.01])}
+                title="Top Plan View"
+              >
+                Top
+              </button>
+              <button
+                className="btn btn-sm"
+                onClick={() => handleCameraPreset([0, 0.4, 5.0])}
+                title="Front Propeller View"
+              >
+                Front
+              </button>
+              <button
+                className="btn btn-sm"
+                onClick={() => handleCameraPreset([4.8, 0.5, 0])}
+                title="Side Cylinder View"
+              >
+                Side
+              </button>
+              <button
+                className={`btn btn-sm ${showLabels ? 'btn-primary' : ''}`}
+                onClick={() => setShowLabels((l) => !l)}
+              >
+                <Eye size={11} /> Labels
+              </button>
+              <button
+                className={`btn btn-sm ${explodeFactor > 0 ? 'btn-primary' : ''}`}
+                onClick={() => setExplodeFactor((v) => (v > 0 ? 0 : 0.65))}
+              >
+                <Layers size={11} /> {explodeFactor > 0 ? 'Assemble' : 'Explode'}
+              </button>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button
-              className="btn"
-              onClick={() => setExplodeFactor((v) => (v > 0 ? 0 : 0.65))}
-            >
-              <Layers size={12} /> {explodeFactor > 0 ? 'Assemble' : 'Explode'}
-            </button>
-            <button
-              className="btn"
-              onClick={() => handleCameraPreset([3.6, 2.2, 3.8])}
-            >
-              <RotateCcw size={12} /> Reset View
-            </button>
-          </div>
-        </div>
+        )}
         {webglAvailable ? (
           <WebGLErrorBoundary fallback={fallbackSchematic}>
             <Canvas
               key={cameraResetKey}
-              camera={{ position: cameraPos, fov: 40 }}
-              style={{ flex: 1, height: 270 }}
+              camera={{ position: cameraPos, fov: 38, near: 0.1, far: 1000 }}
+              gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+              style={{ width: '100%', height: '100%', flex: 1, minHeight: 380, display: 'block' }}
             >
-              <ambientLight intensity={0.65} />
-              <directionalLight position={[6, 8, 5]} intensity={1.35} />
-              <directionalLight position={[-6, -4, -4]} intensity={0.45} color="#38bdf8" />
+              <ambientLight intensity={0.8} />
+              <directionalLight position={[6, 8, 5]} intensity={1.5} />
+              <directionalLight position={[-6, -4, -4]} intensity={0.65} color="#38bdf8" />
+              <pointLight position={[0, 0, 0]} intensity={0.4} color="#38bdf8" />
+              <gridHelper
+                args={[10, 20, '#1d3166', '#0d152a']}
+                position={[0, -1.45, 0]}
+              />
               <ProceduralAeroEngineScene
                 twinState={twinState}
                 subsystemStates={subsystemStates}
                 selectedSubsystem={selectedSubsystem}
-                onSelectSubsystem={setSelectedSubsystem}
+                onSelectSubsystem={handleSelectSubsystem}
                 explodeFactor={explodeFactor}
                 wireframe={wireframe}
                 showLabels={showLabels}
                 animateKinematics={animateKinematics}
               />
-              <OrbitControls enableDamping dampingFactor={0.08} />
+              <OrbitControls
+                makeDefault
+                enableDamping
+                dampingFactor={0.08}
+                minDistance={1.2}
+                maxDistance={18}
+              />
             </Canvas>
           </WebGLErrorBoundary>
         ) : (
           fallbackSchematic
+        )}
+        {shouldShowControls && (
+          <div className="twin-viewport-hud-bottom">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="badge badge-info">{selectedMeta.code}</span>
+              <strong style={{ fontSize: 11.5, color: '#ffffff' }}>
+                {selectedMeta.name}
+              </strong>
+              <span
+                className={
+                  selectedStatus.status === 'CRITICAL'
+                    ? 'badge badge-critical'
+                    : selectedStatus.status === 'WARNING'
+                    ? 'badge badge-warning'
+                    : 'badge badge-nominal'
+                }
+              >
+                {selectedStatus.status}
+              </span>
+            </div>
+            <div className="mono" style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
+              {selectedStatus.reason} · Click any 3D component to inspect
+            </div>
+          </div>
         )}
       </div>
     );
@@ -983,7 +1119,7 @@ export const Engine3DViewport: React.FC<{
                 className={`comp-tree-btn ${
                   selectedSubsystem === sub.id ? 'selected' : ''
                 } ${faultCls}`}
-                onClick={() => setSelectedSubsystem(sub.id)}
+                onClick={() => handleSelectSubsystem(sub.id)}
               >
                 <div style={{ paddingRight: 6 }}>
                   <div
@@ -1106,31 +1242,39 @@ export const Engine3DViewport: React.FC<{
           <WebGLErrorBoundary fallback={fallbackSchematic}>
             <Canvas
               key={cameraResetKey}
-              camera={{ position: cameraPos, fov: 40 }}
-              style={{ flex: 1, minHeight: 410 }}
+              camera={{ position: cameraPos, fov: 38, near: 0.1, far: 1000 }}
+              gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+              style={{ width: '100%', height: '100%', flex: 1, minHeight: 440, display: 'block' }}
             >
-              <ambientLight intensity={0.65} />
-              <directionalLight position={[6, 8, 5]} intensity={1.4} />
+              <ambientLight intensity={0.8} />
+              <directionalLight position={[6, 8, 5]} intensity={1.5} />
               <directionalLight
                 position={[-6, -4, -4]}
-                intensity={0.5}
+                intensity={0.65}
                 color="#38bdf8"
               />
+              <pointLight position={[0, 0, 0]} intensity={0.4} color="#38bdf8" />
               <gridHelper
-                args={[10, 20, '#1e293b', '#0f172a']}
+                args={[10, 20, '#1d3166', '#0d152a']}
                 position={[0, -1.45, 0]}
               />
               <ProceduralAeroEngineScene
                 twinState={twinState}
                 subsystemStates={subsystemStates}
                 selectedSubsystem={selectedSubsystem}
-                onSelectSubsystem={setSelectedSubsystem}
+                onSelectSubsystem={handleSelectSubsystem}
                 explodeFactor={explodeFactor}
                 wireframe={wireframe}
                 showLabels={showLabels}
                 animateKinematics={animateKinematics}
               />
-              <OrbitControls enableDamping dampingFactor={0.08} />
+              <OrbitControls
+                makeDefault
+                enableDamping
+                dampingFactor={0.08}
+                minDistance={1.2}
+                maxDistance={18}
+              />
             </Canvas>
           </WebGLErrorBoundary>
         ) : (
