@@ -58,7 +58,19 @@ import {
   ExplainableAlert,
   FleetOverview,
   FourValueDigitalTwinState,
+  ParameterGroupItem,
+  RESIDUAL_ALERT_THRESHOLDS,
 } from '../types/telemetry';
+import {
+  EmptyState,
+  GlassPanel,
+  SegmentedControl,
+  SeverityBadge,
+  Skeleton,
+  StatusChip,
+  SyntheticBadge,
+} from '../components/ui';
+
 
 export function statusBadgeClass(status: string): string {
   const s = (status || '').toUpperCase();
@@ -208,6 +220,46 @@ export type { FleetCommandCenterScreenProps } from './fleet/FleetCommandCenterSc
 export { EngineDigitalTwinScreen } from './twin/EngineDigitalTwinScreen';
 export type { EngineDigitalTwinScreenProps } from './twin/EngineDigitalTwinScreen';
 
+type TelemetryNumericChannel =
+  | 'rpm'
+  | 'cht_c'
+  | 'egt_c'
+  | 'oil_pressure_bar'
+  | 'oil_temp_c'
+  | 'fuel_flow_lph'
+  | 'vibration_rms_mms'
+  | 'battery_voltage_v'
+  | 'alternator_current_a'
+  | 'injection_pulse_ms'
+  | 'ignition_advance_deg';
+
+function readExpectedChannel(
+  t: FourValueDigitalTwinState,
+  ch: TelemetryNumericChannel
+): number | null {
+  switch (ch) {
+    case 'cht_c':
+      return t.expected.cht_c;
+    case 'egt_c':
+      return t.expected.egt_c;
+    case 'oil_pressure_bar':
+      return t.expected.oil_pressure_bar;
+    case 'oil_temp_c':
+      return t.expected.oil_temp_c;
+    case 'fuel_flow_lph':
+      return t.expected.fuel_flow_lph;
+    case 'vibration_rms_mms':
+      return t.expected.vibration_rms_mms;
+    case 'battery_voltage_v':
+      return t.expected.battery_voltage_v;
+    case 'injection_pulse_ms':
+      return t.expected.injection_pulse_ms;
+    case 'ignition_advance_deg':
+      return t.expected.ignition_advance_deg;
+    default:
+      return null;
+  }
+}
 
 /* =========================================================================
    SCREEN 3: ENGINE HEALTH MONITORING (ALL 8 SIH26054 PARAMETER GROUPS)
@@ -220,10 +272,13 @@ export const TelemetryExplorerScreen: React.FC<{
   engineId: string;
   telemetry: FourValueDigitalTwinState[];
   onRefreshEngine: () => Promise<void>;
-}> = ({ engineId, telemetry, onRefreshEngine }) => {
-  const [selectedChannel, setSelectedChannel] = useState<string>('cht_c');
-  const [detailLevel, setDetailLevel] = useState<1 | 2 | 3>(2);
-  const [paramGroups, setParamGroups] = useState<Record<string, any>[]>([]);
+  backendError?: string | null;
+}> = ({ engineId, telemetry, onRefreshEngine, backendError = null }) => {
+  const [selectedChannel, setSelectedChannel] =
+    useState<TelemetryNumericChannel>('cht_c');
+  const [detailLevel, setDetailLevel] = useState<'1' | '2' | '3'>('2');
+  const [paramGroups, setParamGroups] = useState<ParameterGroupItem[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState<boolean>(true);
   const [csvText, setCsvText] = useState<string>(
     `sequence_number,mission_elapsed_sec,timestamp,rpm,cht_c,egt_c,oil_pressure_bar,oil_temp_c,fuel_flow_lph,vibration_rms_mms,throttle_pct,engine_load_pct,altitude_m,ambient_temp_c\n0,0.0,2026-10-03T08:00:00Z,5010,178.5,816.0,4.15,99.0,22.2,2.30,74.0,76.0,3000,14.0\n1,1.0,2026-10-03T08:00:01Z,5020,218.4,845.0,3.95,114.0,22.8,2.95,74.5,76.5,3005,14.0\n2,2.0,2026-10-03T08:00:02Z,4990,229.0,856.0,3.88,119.5,23.0,3.20,75.0,77.0,3010,14.0`
   );
@@ -231,13 +286,31 @@ export const TelemetryExplorerScreen: React.FC<{
 
   useEffect(() => {
     if (!engineId) return;
+    let active = true;
+    setGroupsLoading(true);
     drishtiApi
       .getEngineParameterGroups(engineId)
-      .then((res) => setParamGroups(res.groups || []))
-      .catch(() => setParamGroups([]));
+      .then((res) => {
+        if (active) {
+          setParamGroups((res.groups || []) as ParameterGroupItem[]);
+        }
+      })
+      .catch(() => {
+        if (active) setParamGroups([]);
+      })
+      .finally(() => {
+        if (active) setGroupsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [engineId, telemetry.length]);
 
-  const channelOptions = [
+  const channelOptions: {
+    key: TelemetryNumericChannel;
+    label: string;
+    unit: string;
+  }[] = [
     { key: 'rpm', label: 'Group 1: Engine Speed (RPM)', unit: 'RPM' },
     {
       key: 'cht_c',
@@ -291,6 +364,7 @@ export const TelemetryExplorerScreen: React.FC<{
     telemetry.length > 0 ? telemetry[telemetry.length - 1] : null;
 
   // Fallback-safe 8 SIH26054 parameter cards derived from API paramGroups + latestFrame
+  // Uses RESIDUAL_ALERT_THRESHOLDS from backend/app/alerts/alert_engine.py
   const eightGroupCards = useMemo(() => {
     const icons = [
       Gauge,
@@ -302,7 +376,7 @@ export const TelemetryExplorerScreen: React.FC<{
       BatteryCharging,
       Wrench,
     ];
-    const primaryChannels = [
+    const primaryChannels: TelemetryNumericChannel[] = [
       'rpm',
       'cht_c',
       'egt_c',
@@ -330,7 +404,12 @@ export const TelemetryExplorerScreen: React.FC<{
         expected: latestFrame ? `${latestFrame.expected.cht_c.toFixed(1)} °C` : 'Unavailable',
         residual: latestFrame ? `Δ = ${latestFrame.calculated.cht_residual_c >= 0 ? '+' : ''}${latestFrame.calculated.cht_residual_c.toFixed(1)} °C` : 'Unavailable',
         envelope: '110 – 235 °C (Warn 220°C)',
-        severity: latestFrame && Math.abs(latestFrame.calculated.cht_residual_c) > 15 ? 'WARNING' : 'NOMINAL',
+        severity:
+          latestFrame &&
+          Math.abs(latestFrame.calculated.cht_residual_c) >=
+            RESIDUAL_ALERT_THRESHOLDS.cht_c
+            ? 'WARNING'
+            : 'NOMINAL',
         explanation: 'Primary indicator of cooling baffle efficiency and combustion thermal load.',
       },
       {
@@ -340,7 +419,12 @@ export const TelemetryExplorerScreen: React.FC<{
         expected: latestFrame ? `${latestFrame.expected.egt_c.toFixed(1)} °C` : 'Unavailable',
         residual: latestFrame ? `Δ = ${latestFrame.calculated.egt_residual_c >= 0 ? '+' : ''}${latestFrame.calculated.egt_residual_c.toFixed(1)} °C` : 'Unavailable',
         envelope: '650 – 920 °C (Warn 880°C)',
-        severity: latestFrame && Math.abs(latestFrame.calculated.egt_residual_c) > 28 ? 'WARNING' : 'NOMINAL',
+        severity:
+          latestFrame &&
+          Math.abs(latestFrame.calculated.egt_residual_c) >=
+            RESIDUAL_ALERT_THRESHOLDS.egt_c
+            ? 'WARNING'
+            : 'NOMINAL',
         explanation: 'Reflects air-fuel stoichiometry, lean/rich misfire, and exhaust valve seating.',
       },
       {
@@ -350,7 +434,16 @@ export const TelemetryExplorerScreen: React.FC<{
         expected: latestFrame ? `${latestFrame.expected.oil_pressure_bar.toFixed(2)} bar / ${latestFrame.expected.oil_temp_c.toFixed(1)} °C` : 'Unavailable',
         residual: latestFrame ? `ΔP = ${latestFrame.calculated.oil_pressure_residual_bar.toFixed(2)} bar` : 'Unavailable',
         envelope: '2.2 – 5.5 bar | 75 – 130 °C',
-        severity: latestFrame && latestFrame.calculated.oil_pressure_residual_bar < -0.5 ? 'CRITICAL' : 'NOMINAL',
+        severity:
+          latestFrame &&
+          latestFrame.calculated.oil_pressure_residual_bar <=
+            RESIDUAL_ALERT_THRESHOLDS.oil_pressure_bar
+            ? 'CRITICAL'
+            : latestFrame &&
+              Math.abs(latestFrame.calculated.oil_temp_residual_c) >=
+                RESIDUAL_ALERT_THRESHOLDS.oil_temp_c
+            ? 'WARNING'
+            : 'NOMINAL',
         explanation: 'Lubrication circuit gallery pressure and thermal viscosity protection.',
       },
       {
@@ -360,7 +453,12 @@ export const TelemetryExplorerScreen: React.FC<{
         expected: latestFrame ? `${latestFrame.expected.fuel_flow_lph.toFixed(2)} L/h` : 'Unavailable',
         residual: latestFrame ? `Δ = ${latestFrame.calculated.fuel_flow_residual_lph >= 0 ? '+' : ''}${latestFrame.calculated.fuel_flow_residual_lph.toFixed(2)} L/h` : 'Unavailable',
         envelope: '8.0 – 34.0 L/h',
-        severity: latestFrame && Math.abs(latestFrame.calculated.fuel_flow_residual_lph) > 2.2 ? 'WARNING' : 'NOMINAL',
+        severity:
+          latestFrame &&
+          Math.abs(latestFrame.calculated.fuel_flow_residual_lph) >=
+            RESIDUAL_ALERT_THRESHOLDS.fuel_flow_lph
+            ? 'WARNING'
+            : 'NOMINAL',
         explanation: 'Volumetric fuel delivery vs throttle/altitude demand and injector rail state.',
       },
       {
@@ -370,7 +468,12 @@ export const TelemetryExplorerScreen: React.FC<{
         expected: latestFrame ? `${latestFrame.expected.vibration_rms_mms.toFixed(2)} mm/s` : 'Unavailable',
         residual: latestFrame ? `Δ = ${latestFrame.calculated.vibration_residual_mms >= 0 ? '+' : ''}${latestFrame.calculated.vibration_residual_mms.toFixed(2)} mm/s` : 'Unavailable',
         envelope: '1.0 – 5.5 mm/s (Warn 4.2)',
-        severity: latestFrame && latestFrame.calculated.vibration_residual_mms > 1.2 ? 'WARNING' : 'NOMINAL',
+        severity:
+          latestFrame &&
+          latestFrame.calculated.vibration_residual_mms >=
+            RESIDUAL_ALERT_THRESHOLDS.vibration_mms
+            ? 'WARNING'
+            : 'NOMINAL',
         explanation: 'Broadband crankcase acceleration tracking bearing wear, misfire, and ring blow-by.',
       },
       {
@@ -492,15 +595,16 @@ export const TelemetryExplorerScreen: React.FC<{
       setIngestStatus(
         `Ingested ${res.summary.total_frames} frames into mission ${res.mission.mission_id}. Final Class: ${res.summary.final_predicted_class}`
       );
-    } catch (err: any) {
-      setIngestStatus(`CSV Ingest Error: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setIngestStatus(`CSV Ingest Error: ${msg}`);
     }
   };
 
   const seriesData = telemetry.map((t) => ({
     elapsed: t.mission_elapsed_sec,
-    actual: (t.actual as any)[selectedChannel],
-    expected: (t.expected as any)[selectedChannel] ?? null,
+    actual: t.actual[selectedChannel],
+    expected: readExpectedChannel(t, selectedChannel),
     rpm: t.actual.rpm,
     cht_c: t.actual.cht_c,
     cht_exp: t.expected.cht_c,
@@ -515,6 +619,35 @@ export const TelemetryExplorerScreen: React.FC<{
     inj: t.actual.injection_pulse_ms,
     ign: t.actual.ignition_advance_deg,
   }));
+
+  const detailNum = Number(detailLevel);
+
+  if (backendError && telemetry.length === 0) {
+    return (
+      <div className="fleet-offline-wrap">
+        <EmptyState
+          title="Telemetry Stream Unreachable"
+          description={`Cannot load 8-group propulsion parameter telemetry for ${engineId}. FastAPI backend may be offline.`}
+          action={
+            <button className="btn btn-primary" onClick={onRefreshEngine}>
+              <RefreshCw size={13} /> Retry Connection
+            </button>
+          }
+        />
+      </div>
+    );
+  }
+
+  if (groupsLoading && telemetry.length === 0) {
+    return (
+      <GlassPanel className="panel-card" aria-busy="true">
+        <Skeleton variant="text" width={360} height={28} />
+        <div className="grid-4" style={{ marginTop: 12 }}>
+          <Skeleton variant="rect" height={125} count={8} />
+        </div>
+      </GlassPanel>
+    );
+  }
 
   return (
     <div>
@@ -534,37 +667,22 @@ export const TelemetryExplorerScreen: React.FC<{
           </div>
         </div>
         <div className="screen-actions">
-          <div
-            style={{
-              display: 'flex',
-              background: 'var(--bg-elevated)',
-              padding: 3,
-              borderRadius: 5,
-              border: '1px solid var(--border-medium)',
-              gap: 4,
-            }}
-            role="group"
-            aria-label="Detail Level Selector"
-          >
-            <button
-              className={`btn btn-sm ${detailLevel === 1 ? 'btn-primary' : ''}`}
-              onClick={() => setDetailLevel(1)}
-            >
-              Level 1: At-a-Glance
-            </button>
-            <button
-              className={`btn btn-sm ${detailLevel === 2 ? 'btn-primary' : ''}`}
-              onClick={() => setDetailLevel(2)}
-            >
-              Level 2: Trends & Context
-            </button>
-            <button
-              className={`btn btn-sm ${detailLevel === 3 ? 'btn-primary' : ''}`}
-              onClick={() => setDetailLevel(3)}
-            >
-              Level 3: Engineering Deep-Dive
-            </button>
-          </div>
+          {latestFrame && (
+            <SyntheticBadge
+              isSynthetic={latestFrame.is_synthetic}
+              label={latestFrame.data_source || 'SIMULATED'}
+            />
+          )}
+          <SegmentedControl
+            ariaLabel="Detail Level Selector"
+            value={detailLevel}
+            onChange={setDetailLevel}
+            options={[
+              { value: '1', label: 'Level 1: At-a-Glance' },
+              { value: '2', label: 'Level 2: Trends & Context' },
+              { value: '3', label: 'Level 3: Engineering Deep-Dive' },
+            ]}
+          />
           <button className="btn btn-primary" onClick={handleExportCsv}>
             <Download size={13} /> Export Twin CSV
           </button>
@@ -582,14 +700,16 @@ export const TelemetryExplorerScreen: React.FC<{
             card.severity.includes('WARN') || card.severity.includes('CAUT');
           const isCrit = card.severity.includes('CRIT');
           return (
-            <div
+            <GlassPanel
               key={card.id}
+              hoverable
+              glow={isCrit ? 'critical' : isWarn ? 'caution' : 'none'}
               className={`param-group-card ${
                 isCrit ? 'alert-critical' : isWarn ? 'alert-warning' : ''
               }`}
               onClick={() => {
                 setSelectedChannel(card.channelKey);
-                if (detailLevel < 2) setDetailLevel(2);
+                if (detailNum < 2) setDetailLevel('2');
               }}
               style={{ cursor: 'pointer' }}
               title="Click to inspect parameter time-series trend"
@@ -609,15 +729,16 @@ export const TelemetryExplorerScreen: React.FC<{
                     gap: 7,
                     fontWeight: 700,
                     fontSize: 12,
-                    color: '#ffffff',
+                    color: 'var(--text-primary)',
                   }}
                 >
-                  <IconComp size={14} color="#38bdf8" />
+                  <IconComp size={14} color="var(--cyan)" />
                   <span>{card.name}</span>
                 </div>
-                <span className={statusBadgeClass(card.severity)}>
-                  {card.severity}
-                </span>
+                <SeverityBadge
+                  severity={card.severity}
+                  customLabel={card.severity}
+                />
               </div>
 
               <div
@@ -625,7 +746,7 @@ export const TelemetryExplorerScreen: React.FC<{
                 style={{
                   fontSize: 18,
                   fontWeight: 700,
-                  color: '#38bdf8',
+                  color: 'var(--cyan)',
                   marginBottom: 4,
                 }}
               >
@@ -636,42 +757,42 @@ export const TelemetryExplorerScreen: React.FC<{
                 className="mono"
                 style={{
                   fontSize: 11,
-                  color: '#94a3b8',
+                  color: 'var(--text-secondary)',
                   display: 'flex',
                   justifyContent: 'space-between',
                   marginBottom: 6,
                 }}
               >
                 <span>Ref: {card.expected}</span>
-                <span style={{ color: '#e2e8f0' }}>{card.residual}</span>
+                <span style={{ color: 'var(--text-primary)' }}>{card.residual}</span>
               </div>
 
               <div
                 style={{
                   fontSize: 11,
-                  color: '#64748b',
-                  borderTop: '1px solid rgba(255,255,255,0.05)',
+                  color: 'var(--text-muted)',
+                  borderTop: '1px solid var(--border-subtle)',
                   paddingTop: 6,
                 }}
               >
-                <div className="mono" style={{ fontSize: 10.5, color: '#8899bb' }}>
+                <div className="mono" style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
                   Envelope: {card.envelope}
                 </div>
-                {detailLevel >= 2 && (
-                  <div style={{ marginTop: 3, color: '#94a3b8' }}>
+                {detailNum >= 2 && (
+                  <div style={{ marginTop: 3, color: 'var(--text-secondary)' }}>
                     {card.explanation}
                   </div>
                 )}
               </div>
-            </div>
+            </GlassPanel>
           );
         })}
       </div>
 
       {/* LEVEL 2: PARAMETER TRENDS & EXPLANATIONS */}
-      {detailLevel >= 2 && (
+      {detailNum >= 2 && (
         <>
-          <div className="panel-card">
+          <GlassPanel className="panel-card">
             <div className="panel-card-header">
               <div className="panel-card-title">
                 <Activity size={14} /> Interactive Channel Time-Series Inspector
@@ -680,7 +801,9 @@ export const TelemetryExplorerScreen: React.FC<{
               <select
                 className="select-control"
                 value={selectedChannel}
-                onChange={(e) => setSelectedChannel(e.target.value)}
+                onChange={(e) =>
+                  setSelectedChannel(e.target.value as TelemetryNumericChannel)
+                }
                 aria-label="Select Telemetry Channel"
               >
                 {channelOptions.map((o) => (
@@ -690,39 +813,46 @@ export const TelemetryExplorerScreen: React.FC<{
                 ))}
               </select>
             </div>
-            <div style={{ height: 235 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={seriesData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1a2440" />
-                  <XAxis dataKey="elapsed" stroke="#8899bb" unit="s" />
-                  <YAxis stroke="#8899bb" domain={['auto', 'auto']} />
-                  <Tooltip />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="actual"
-                    name={`Actual ${selectedChannel}`}
-                    stroke="#38bdf8"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="expected"
-                    name={`Physics Expected ${selectedChannel}`}
-                    stroke="#22c55e"
-                    strokeDasharray="5 5"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+            {telemetry.length === 0 ? (
+              <EmptyState
+                title="No telemetry data"
+                description="No frames loaded for this engine. Stream live data or ingest a CSV."
+              />
+            ) : (
+              <div style={{ height: 235 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={seriesData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle, #1a2440)" />
+                    <XAxis dataKey="elapsed" stroke="var(--text-muted, #8899bb)" unit="s" />
+                    <YAxis stroke="var(--text-muted, #8899bb)" domain={['auto', 'auto']} />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="actual"
+                      name={`Actual ${selectedChannel}`}
+                      stroke="#38bdf8"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="expected"
+                      name={`Physics Expected ${selectedChannel}`}
+                      stroke="#22c55e"
+                      strokeDasharray="5 5"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </GlassPanel>
 
           {/* ORGANIZED MULTI-GROUP CHARTS FOR ALL 8 GROUPS */}
           <div className="grid-2">
-            <div className="panel-card">
+            <GlassPanel className="panel-card">
               <div className="panel-card-header">
                 <div className="panel-card-title">
                   Groups 1, 2 & 3 — RPM, CHT (°C) & EGT (°C) Trends
@@ -731,9 +861,9 @@ export const TelemetryExplorerScreen: React.FC<{
               <div style={{ height: 205 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={seriesData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1a2440" />
-                    <XAxis dataKey="elapsed" stroke="#8899bb" unit="s" />
-                    <YAxis stroke="#8899bb" domain={['auto', 'auto']} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle, #1a2440)" />
+                    <XAxis dataKey="elapsed" stroke="var(--text-muted, #8899bb)" unit="s" />
+                    <YAxis stroke="var(--text-muted, #8899bb)" domain={['auto', 'auto']} />
                     <Tooltip />
                     <Legend />
                     <Line
@@ -755,9 +885,9 @@ export const TelemetryExplorerScreen: React.FC<{
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </GlassPanel>
 
-            <div className="panel-card">
+            <GlassPanel className="panel-card">
               <div className="panel-card-header">
                 <div className="panel-card-title">
                   Groups 4, 5 & 6 — Oil Pressure (bar), Fuel (L/h) & Vibration
@@ -767,9 +897,9 @@ export const TelemetryExplorerScreen: React.FC<{
               <div style={{ height: 205 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={seriesData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1a2440" />
-                    <XAxis dataKey="elapsed" stroke="#8899bb" unit="s" />
-                    <YAxis stroke="#8899bb" domain={['auto', 'auto']} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle, #1a2440)" />
+                    <XAxis dataKey="elapsed" stroke="var(--text-muted, #8899bb)" unit="s" />
+                    <YAxis stroke="var(--text-muted, #8899bb)" domain={['auto', 'auto']} />
                     <Tooltip />
                     <Legend />
                     <Line
@@ -799,11 +929,11 @@ export const TelemetryExplorerScreen: React.FC<{
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </GlassPanel>
           </div>
 
           <div className="grid-2">
-            <div className="panel-card">
+            <GlassPanel className="panel-card">
               <div className="panel-card-header">
                 <div className="panel-card-title">
                   Group 7 — Battery Bus Voltage (V) & Alternator Current (A)
@@ -812,9 +942,9 @@ export const TelemetryExplorerScreen: React.FC<{
               <div style={{ height: 190 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={seriesData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1a2440" />
-                    <XAxis dataKey="elapsed" stroke="#8899bb" unit="s" />
-                    <YAxis stroke="#8899bb" domain={['auto', 'auto']} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle, #1a2440)" />
+                    <XAxis dataKey="elapsed" stroke="var(--text-muted, #8899bb)" unit="s" />
+                    <YAxis stroke="var(--text-muted, #8899bb)" domain={['auto', 'auto']} />
                     <Tooltip />
                     <Legend />
                     <Line
@@ -836,9 +966,9 @@ export const TelemetryExplorerScreen: React.FC<{
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </GlassPanel>
 
-            <div className="panel-card">
+            <GlassPanel className="panel-card">
               <div className="panel-card-header">
                 <div className="panel-card-title">
                   Group 8 — Injection Pulse Width (ms) & Ignition Advance
@@ -848,9 +978,9 @@ export const TelemetryExplorerScreen: React.FC<{
               <div style={{ height: 190 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={seriesData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1a2440" />
-                    <XAxis dataKey="elapsed" stroke="#8899bb" unit="s" />
-                    <YAxis stroke="#8899bb" domain={['auto', 'auto']} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle, #1a2440)" />
+                    <XAxis dataKey="elapsed" stroke="var(--text-muted, #8899bb)" unit="s" />
+                    <YAxis stroke="var(--text-muted, #8899bb)" domain={['auto', 'auto']} />
                     <Tooltip />
                     <Legend />
                     <Line
@@ -872,23 +1002,21 @@ export const TelemetryExplorerScreen: React.FC<{
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </GlassPanel>
           </div>
         </>
       )}
 
       {/* LEVEL 3: DETAILED ENGINEERING MATRIX, CSV INGESTION & RAW LOG ON DEMAND */}
-      {detailLevel >= 3 && (
+      {detailNum >= 3 && (
         <>
-          <div className="panel-card">
+          <GlassPanel className="panel-card">
             <div className="panel-card-header">
               <div className="panel-card-title">
                 <ShieldCheck size={14} /> SIH26054 Complete 8-Group Propulsion
                 Health Monitoring Matrix
               </div>
-              <span className="badge badge-info">
-                ALL 8 PARAMETER GROUPS VERIFIED
-              </span>
+              <StatusChip status="info" label="ALL 8 PARAMETER GROUPS VERIFIED" />
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table className="data-table mono" style={{ fontSize: 11.5 }}>
@@ -910,31 +1038,32 @@ export const TelemetryExplorerScreen: React.FC<{
                       <td>
                         <strong>{g.name}</strong>
                       </td>
-                      <td style={{ color: '#38bdf8', fontWeight: 700 }}>
+                      <td style={{ color: 'var(--cyan)', fontWeight: 700 }}>
                         {g.current}
                       </td>
-                      <td style={{ color: '#4ade80' }}>{g.expected}</td>
+                      <td style={{ color: 'var(--color-nominal)' }}>{g.expected}</td>
                       <td>{g.residual}</td>
-                      <td style={{ fontSize: 11, color: '#cbd5e1' }}>
+                      <td style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                         {g.envelope}
                       </td>
                       <td style={{ fontSize: 11 }}>{g.minMeanMax}</td>
-                      <td style={{ fontSize: 11, color: '#94a3b8' }}>
+                      <td style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                         {g.healthContribution}
                       </td>
                       <td>
-                        <span className={statusBadgeClass(g.severity)}>
-                          {g.severity}
-                        </span>
+                        <SeverityBadge
+                          severity={g.severity}
+                          customLabel={g.severity}
+                        />
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
+          </GlassPanel>
 
-          <div className="panel-card">
+          <GlassPanel className="panel-card">
             <div className="panel-card-header">
               <div className="panel-card-title">
                 <Upload size={13} /> Historical CSV Telemetry Ingestion
@@ -951,13 +1080,13 @@ export const TelemetryExplorerScreen: React.FC<{
               onChange={(e) => setCsvText(e.target.value)}
             />
             {ingestStatus && (
-              <div className="mono" style={{ color: '#38bdf8', fontSize: 11.5 }}>
+              <div className="mono" style={{ color: 'var(--cyan)', fontSize: 11.5 }}>
                 {ingestStatus}
               </div>
             )}
-          </div>
+          </GlassPanel>
 
-          <div className="panel-card">
+          <GlassPanel className="panel-card">
             <div className="panel-card-header">
               <div className="panel-card-title">
                 Telemetry Contract Frame Log (Latest 20 Frames)
@@ -989,26 +1118,81 @@ export const TelemetryExplorerScreen: React.FC<{
                         <td>#{t.sequence_number}</td>
                         <td>{t.mission_elapsed_sec.toFixed(1)}s</td>
                         <td>{t.actual.rpm.toFixed(0)}</td>
-                        <td>
+                        <td
+                          style={{
+                            color:
+                              Math.abs(t.calculated.cht_residual_c) >=
+                              RESIDUAL_ALERT_THRESHOLDS.cht_c
+                                ? 'var(--color-caution)'
+                                : 'var(--text-primary)',
+                          }}
+                        >
                           {t.actual.cht_c.toFixed(1)} (
                           {t.calculated.cht_residual_c >= 0 ? '+' : ''}
                           {t.calculated.cht_residual_c.toFixed(1)})
                         </td>
-                        <td>{t.actual.egt_c.toFixed(1)}</td>
-                        <td>{t.actual.oil_pressure_bar.toFixed(2)}</td>
-                        <td>{t.actual.oil_temp_c.toFixed(1)}</td>
-                        <td>{t.actual.fuel_flow_lph.toFixed(2)}</td>
-                        <td>{t.actual.vibration_rms_mms.toFixed(2)}</td>
+                        <td
+                          style={{
+                            color:
+                              Math.abs(t.calculated.egt_residual_c) >=
+                              RESIDUAL_ALERT_THRESHOLDS.egt_c
+                                ? 'var(--color-caution)'
+                                : 'var(--text-primary)',
+                          }}
+                        >
+                          {t.actual.egt_c.toFixed(1)}
+                        </td>
+                        <td
+                          style={{
+                            color:
+                              t.calculated.oil_pressure_residual_bar <=
+                              RESIDUAL_ALERT_THRESHOLDS.oil_pressure_bar
+                                ? 'var(--color-critical)'
+                                : 'var(--text-primary)',
+                          }}
+                        >
+                          {t.actual.oil_pressure_bar.toFixed(2)}
+                        </td>
+                        <td
+                          style={{
+                            color:
+                              Math.abs(t.calculated.oil_temp_residual_c) >=
+                              RESIDUAL_ALERT_THRESHOLDS.oil_temp_c
+                                ? 'var(--color-caution)'
+                                : 'var(--text-primary)',
+                          }}
+                        >
+                          {t.actual.oil_temp_c.toFixed(1)}
+                        </td>
+                        <td
+                          style={{
+                            color:
+                              Math.abs(t.calculated.fuel_flow_residual_lph) >=
+                              RESIDUAL_ALERT_THRESHOLDS.fuel_flow_lph
+                                ? 'var(--color-caution)'
+                                : 'var(--text-primary)',
+                          }}
+                        >
+                          {t.actual.fuel_flow_lph.toFixed(2)}
+                        </td>
+                        <td
+                          style={{
+                            color:
+                              t.calculated.vibration_residual_mms >=
+                              RESIDUAL_ALERT_THRESHOLDS.vibration_mms
+                                ? 'var(--color-caution)'
+                                : 'var(--text-primary)',
+                          }}
+                        >
+                          {t.actual.vibration_rms_mms.toFixed(2)}
+                        </td>
                         <td>
-                          <span
-                            className={
-                              t.actual.quality.is_valid
-                                ? 'badge badge-nominal'
-                                : 'badge badge-caution'
+                          <StatusChip
+                            status={
+                              t.actual.quality.is_valid ? 'nominal' : 'caution'
                             }
-                          >
-                            {t.actual.quality.quality_score.toFixed(2)}
-                          </span>
+                            label={t.actual.quality.quality_score.toFixed(2)}
+                          />
                         </td>
                         <td>{t.predicted.predicted_fault_class}</td>
                       </tr>
@@ -1016,7 +1200,7 @@ export const TelemetryExplorerScreen: React.FC<{
                 </tbody>
               </table>
             </div>
-          </div>
+          </GlassPanel>
         </>
       )}
     </div>

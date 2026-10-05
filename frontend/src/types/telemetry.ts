@@ -208,7 +208,7 @@ export interface FleetOverview {
   total_active_alerts: number;
   engines: EngineRecord[];
   recent_alerts: ExplainableAlert[];
-  can_adapter_status: Record<string, any>;
+  can_adapter_status: Record<string, unknown>;
   data_quality_stats: Record<string, number>;
 }
 
@@ -240,9 +240,138 @@ export interface ReplaySnapshot {
   total_frames: number;
   current_timestamp: string | null;
   current_elapsed_sec: number;
-  mission_metadata: Record<string, any>;
+  mission_metadata: Record<string, unknown>;
   current_state: FourValueDigitalTwinState | null;
   synchronized_history: FourValueDigitalTwinState[];
   synchronized_alerts: ExplainableAlert[];
   all_mission_alerts: ExplainableAlert[];
 }
+
+/**
+ * Residual trigger thresholds matching backend/app/alerts/alert_engine.py (lines 23-30).
+ */
+export const RESIDUAL_ALERT_THRESHOLDS = {
+  cht_c: 10.0,
+  egt_c: 25.0,
+  oil_pressure_bar: -0.35,
+  oil_temp_c: 8.0,
+  vibration_mms: 0.70,
+  fuel_flow_lph: 1.8,
+} as const;
+
+export interface UnifiedDiagnosisSummary {
+  faultClass: string;
+  confidencePct: string;
+  topProbability: number;
+  certainty: string;
+  isAnomaly: boolean;
+  anomalyScore: number;
+  anomalyThreshold: number;
+  sensorStatus: string;
+}
+
+export function extractUnifiedDiagnosis(
+  state: FourValueDigitalTwinState | null
+): UnifiedDiagnosisSummary {
+  if (!state) {
+    return {
+      faultClass: 'Normal',
+      confidencePct: '0.0',
+      topProbability: 0,
+      certainty: 'UNCERTAIN_INSUFFICIENT_EVIDENCE',
+      isAnomaly: false,
+      anomalyScore: 0,
+      anomalyThreshold: 0,
+      sensorStatus: 'SENSORS_NOMINAL',
+    };
+  }
+  const p = state.predicted;
+  return {
+    faultClass: p.predicted_fault_class,
+    confidencePct: (p.top_probability * 100).toFixed(1),
+    topProbability: p.top_probability,
+    certainty: p.diagnosis_certainty_status,
+    isAnomaly: p.is_anomaly,
+    anomalyScore: p.anomaly_score,
+    anomalyThreshold: p.anomaly_threshold,
+    sensorStatus: p.sensor_diagnosis.diagnosis_status,
+  };
+}
+
+export interface ParameterGroupStats {
+  mean: number;
+  min: number;
+  max: number;
+}
+
+export interface ParameterGroupItem {
+  group_id: number;
+  group_name: string;
+  unit: string;
+  current_value: string;
+  expected_value: string;
+  residual_value: string;
+  operating_range: string;
+  historical_stats?: ParameterGroupStats;
+  quality_freshness?: string;
+  abnormality_detected?: boolean;
+  severity: string;
+  health_contribution: string;
+}
+
+export interface MissionPresetItem {
+  preset_id: string;
+  title: string;
+  mission_profile: string;
+  fault_class: string;
+  default_onset_sec: number;
+  default_duration_sec: number;
+  default_severity: number;
+  default_altitude_m: number;
+  default_ambient_temp_c: number;
+  default_throttle_pct: number;
+  default_load_pct: number;
+}
+
+export interface MissionRecordItem {
+  mission_id: string;
+  engine_id: string;
+  title?: string;
+  mission_profile?: string;
+  fault_class: string;
+  severity?: number;
+  duration_sec?: number;
+  data_source?: string;
+  is_synthetic?: boolean;
+  created_at?: string;
+}
+
+export interface SimulationSummaryData {
+  total_frames: number;
+  alert_count: number;
+  initial_health_index: number;
+  final_health_index: number;
+  min_health_index?: number;
+  final_predicted_class: string;
+  final_top_probability: number;
+  final_rul_status: string;
+  final_rul_hours: number | null;
+  final_rul_interval_hours?: [number | null, number | null];
+  peak_abs_cht_residual_c: number;
+  peak_abs_vibration_residual_mms?: number;
+  min_oil_pressure_residual_bar?: number;
+  processing_throughput_fps: number;
+  mean_frame_latency_ms: number;
+}
+
+export interface SimulationResultData {
+  simulation_id: string;
+  report_id: string;
+  engine: EngineRecord;
+  mission: MissionRecordItem;
+  summary: SimulationSummaryData;
+  latest_state: FourValueDigitalTwinState;
+  telemetry?: FourValueDigitalTwinState[];
+  alerts?: ExplainableAlert[];
+}
+

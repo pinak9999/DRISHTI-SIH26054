@@ -32,6 +32,7 @@ import {
   ExplainableAlert,
   FleetOverview,
   FourValueDigitalTwinState,
+  MissionRecordItem,
 } from './types/telemetry';
 import {
   EngineDigitalTwinScreen,
@@ -126,12 +127,12 @@ export const App: React.FC = () => {
   const [engineTelemetry, setEngineTelemetry] = useState<FourValueDigitalTwinState[]>([]);
   const [latestState, setLatestState] = useState<FourValueDigitalTwinState | null>(null);
   const [engineAlerts, setEngineAlerts] = useState<ExplainableAlert[]>([]);
-  const [catalog, setCatalog] = useState<Record<string, any> | null>(null);
-  const [modelStatus, setModelStatus] = useState<Record<string, any> | null>(null);
-  const [missions, setMissions] = useState<Record<string, any>[]>([]);
-  const [reports, setReports] = useState<Record<string, any>[]>([]);
+  const [catalog, setCatalog] = useState<Record<string, unknown> | null>(null);
+  const [modelStatus, setModelStatus] = useState<Record<string, unknown> | null>(null);
+  const [missions, setMissions] = useState<MissionRecordItem[]>([]);
+  const [reports, setReports] = useState<Record<string, unknown>[]>([]);
   const [backendHealth, setBackendHealth] =
-    useState<Record<string, any> | null>(null);
+    useState<Record<string, unknown> | null>(null);
   const [measuredLatency, setMeasuredLatency] = useState<number>(145);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -168,7 +169,10 @@ export const App: React.FC = () => {
       setErrorBanner(null);
       const tStart = performance.now();
       const [h, fl, cat, ms, mis, reps] = await Promise.all([
-        drishtiApi.getHealth().catch((err) => ({ status: 'error', error: err.message })),
+        drishtiApi.getHealth().catch((err: unknown) => ({
+          status: 'error',
+          error: err instanceof Error ? err.message : 'Connection failed',
+        })),
         drishtiApi.getFleet().catch(() => null),
         drishtiApi.getCatalog().catch(() => null),
         drishtiApi.getModelStatus().catch(() => null),
@@ -185,14 +189,19 @@ export const App: React.FC = () => {
       if (fl) setFleet(fl);
       if (cat) setCatalog(cat);
       if (ms) setModelStatus(ms);
-      if (mis?.items) setMissions(mis.items);
+      if (mis?.items) setMissions(mis.items as unknown as MissionRecordItem[]);
       if (reps?.items) setReports(reps.items);
       if (h.status !== 'ok') {
-        setErrorBanner(`FastAPI Backend offline at ${drishtiApi.getBaseUrl()}: ${h.error || 'Connection refused'}`);
+        setErrorBanner(
+          `FastAPI Backend offline at ${drishtiApi.getBaseUrl()}: ${
+            String((h as Record<string, unknown>).error || 'Connection refused')
+          }`
+        );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Connection error';
       setErrorBanner(
-        `Backend API unreachable: ${err.message}. Ensure backend is running or check network connectivity.`
+        `Backend API unreachable: ${msg}. Ensure backend is running or check network connectivity.`
       );
     }
   };
@@ -210,8 +219,9 @@ export const App: React.FC = () => {
       if (telem) {
         setEngineTelemetry(telem.items || []);
       }
-    } catch (err: any) {
-      setErrorBanner(`Failed loading engine ${engId}: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setErrorBanner(`Failed loading engine ${engId}: ${msg}`);
     }
   };
 
@@ -262,7 +272,10 @@ export const App: React.FC = () => {
     : apiOnline
     ? 'online'
     : 'offline';
-  const latencyMs = backendHealth?.last_inference_latency_ms ?? measuredLatency;
+  const latencyMs =
+    typeof backendHealth?.last_inference_latency_ms === 'number'
+      ? backendHealth.last_inference_latency_ms
+      : measuredLatency;
   const activeAlertCount = fleet?.total_active_alerts ?? (engineAlerts.length || 0);
 
   return (
@@ -319,7 +332,9 @@ export const App: React.FC = () => {
             <select
               className="pill-select mono"
               value={simMode}
-              onChange={(e) => setSimMode(e.target.value as any)}
+              onChange={(e) =>
+                setSimMode(e.target.value as 'Simulation' | 'Hardware CAN')
+              }
               title="Operational execution environment"
             >
               <option value="Simulation">Simulation</option>
@@ -554,90 +569,102 @@ export const App: React.FC = () => {
                   />
                 )}
 
-            {activeScreen === 'twin' && (
-              <EngineDigitalTwinScreen
-                engineId={selectedEngineId}
-                engineRecord={selectedEngineRecord}
-                telemetry={engineTelemetry}
-                latestState={latestState}
-                onRefreshEngine={() => loadEngineData(selectedEngineId)}
-                onNavigate={setActiveScreen}
-                backendError={errorBanner}
-              />
-            )}
+                {activeScreen === 'twin' && (
+                  <EngineDigitalTwinScreen
+                    engineId={selectedEngineId}
+                    engineRecord={selectedEngineRecord}
+                    telemetry={engineTelemetry}
+                    latestState={latestState}
+                    onRefreshEngine={() => loadEngineData(selectedEngineId)}
+                    onNavigate={setActiveScreen}
+                    backendError={errorBanner}
+                  />
+                )}
 
-            {activeScreen === 'telemetry' && (
-              <TelemetryExplorerScreen
-                engineId={selectedEngineId}
-                telemetry={engineTelemetry}
-                onRefreshEngine={async () => {
-                  await loadEngineData(selectedEngineId);
-                  await loadGlobalData();
-                }}
-              />
-            )}
+                {activeScreen === 'telemetry' && (
+                  <TelemetryExplorerScreen
+                    engineId={selectedEngineId}
+                    telemetry={engineTelemetry}
+                    backendError={errorBanner}
+                    onRefreshEngine={async () => {
+                      await loadEngineData(selectedEngineId);
+                      await loadGlobalData();
+                    }}
+                  />
+                )}
 
-            {activeScreen === 'faults' && (
-              <FaultInvestigationScreen
-                engineId={selectedEngineId}
-                latestState={latestState}
-                alerts={engineAlerts}
-                catalog={catalog}
-                backendError={errorBanner}
-                onRefreshEngine={async () => {
-                  await loadEngineData(selectedEngineId);
-                  await loadGlobalData();
-                }}
-              />
-            )}
+                {activeScreen === 'faults' && (
+                  <FaultInvestigationScreen
+                    engineId={selectedEngineId}
+                    latestState={latestState}
+                    alerts={engineAlerts}
+                    catalog={catalog}
+                    backendError={errorBanner}
+                    onRefreshEngine={async () => {
+                      await loadEngineData(selectedEngineId);
+                      await loadGlobalData();
+                    }}
+                  />
+                )}
 
-            {activeScreen === 'simulator' && (
-              <MissionSimulatorScreen
-                selectedEngineId={selectedEngineId}
-                catalog={catalog}
-                onSimulationCompleted={handleSimulationCompleted}
-              />
-            )}
+                {activeScreen === 'simulator' && (
+                  <MissionSimulatorScreen
+                    selectedEngineId={selectedEngineId}
+                    catalog={catalog}
+                    backendError={errorBanner}
+                    onRefreshBackend={handleRefreshAll}
+                    onSimulationCompleted={handleSimulationCompleted}
+                  />
+                )}
 
-            {activeScreen === 'replay' && (
-              <HistoricalMissionReplayScreen missions={missions} />
-            )}
+                {activeScreen === 'replay' && (
+                  <HistoricalMissionReplayScreen
+                    missions={missions}
+                    backendError={errorBanner}
+                    onRefreshBackend={handleRefreshAll}
+                  />
+                )}
 
-            {activeScreen === 'rul' && (
-              <PredictiveMaintenanceRulScreen
-                engineId={selectedEngineId}
-                backendError={errorBanner}
-                onRefresh={async () => {
-                  await loadEngineData(selectedEngineId);
-                  await loadGlobalData();
-                }}
-              />
-            )}
+                {activeScreen === 'rul' && (
+                  <PredictiveMaintenanceRulScreen
+                    engineId={selectedEngineId}
+                    backendError={errorBanner}
+                    onRefresh={async () => {
+                      await loadEngineData(selectedEngineId);
+                      await loadGlobalData();
+                    }}
+                  />
+                )}
 
-            {activeScreen === 'evaluation' && (
-              <ModelEvaluationScreen
-                modelStatus={modelStatus}
-                onRefreshModelStatus={loadGlobalData}
-              />
-            )}
+                {activeScreen === 'evaluation' && (
+                  <ModelEvaluationScreen
+                    modelStatus={modelStatus}
+                    backendError={errorBanner}
+                    onRefreshModelStatus={loadGlobalData}
+                  />
+                )}
 
-            {activeScreen === 'reports' && (
-              <ReportsAndSettingsScreen
-                reports={reports}
-                catalog={catalog}
-                modelStatus={modelStatus}
-                backendHealth={backendHealth}
-                onNavigate={setActiveScreen}
-              />
-            )}
+                {activeScreen === 'reports' && (
+                  <ReportsAndSettingsScreen
+                    reports={reports}
+                    catalog={catalog}
+                    modelStatus={modelStatus}
+                    backendHealth={backendHealth}
+                    backendError={errorBanner}
+                    onRefreshBackend={handleRefreshAll}
+                    onNavigate={setActiveScreen}
+                  />
+                )}
 
-            {activeScreen === 'docs' && (
-              <SystemStatusAndTechDocsScreen
-                backendHealth={backendHealth}
-                catalog={catalog}
-                modelStatus={modelStatus}
-              />
-            )}
+                {activeScreen === 'docs' && (
+                  <SystemStatusAndTechDocsScreen
+                    backendHealth={backendHealth}
+                    catalog={catalog}
+                    modelStatus={modelStatus}
+                    backendError={errorBanner}
+                    onRefreshBackend={handleRefreshAll}
+                  />
+                )}
               </>
             )}
           </div>

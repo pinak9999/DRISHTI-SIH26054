@@ -1,7 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
   Legend,
   Line,
@@ -21,22 +19,39 @@ import {
   ChevronUp,
   Cpu,
   FastForward,
-  Info,
   Pause,
   Play,
+  ShieldAlert,
   Sliders,
   StepForward,
-  Wrench,
 } from 'lucide-react';
 import { drishtiApi } from '../api/client';
 import { Engine3DViewport } from '../components/Engine3DViewport';
 import {
+  EmptyState,
+  GlassPanel,
+  KpiTile,
+  Scrubber,
+  ScrubberMarker,
+  SeverityBadge,
+  Skeleton,
+  StatusChip,
+  SyntheticBadge,
+} from '../components/ui';
+import {
   ExplainableAlert,
   FaultScenarioConfig,
   FourValueDigitalTwinState,
+  MissionPresetItem,
+  MissionRecordItem,
+  RESIDUAL_ALERT_THRESHOLDS,
   ReplaySnapshot,
+  SimulationResultData,
+  extractUnifiedDiagnosis,
 } from '../types/telemetry';
 import { statusBadgeClass } from './FleetAndTwinScreens';
+
+export { FaultInvestigationScreen } from './faults/FaultInvestigationScreen';
 
 function mapFaultToSubsystemName(faultClass: string): string {
   switch (faultClass) {
@@ -59,468 +74,23 @@ function mapFaultToSubsystemName(faultClass: string): string {
   }
 }
 
-/* =========================================================================
-   SCREEN 4: FAULT INVESTIGATION & EXPLAINABLE ALERTS
-   ========================================================================= */
-export const FaultInvestigationScreen: React.FC<{
-  engineId: string;
-  latestState: FourValueDigitalTwinState | null;
-  alerts: ExplainableAlert[];
-  catalog?: Record<string, any> | null;
-  onRefreshEngine: () => Promise<void>;
-}> = ({ engineId, latestState, alerts, catalog, onRefreshEngine }) => {
-  const [showCatalogMatrix, setShowCatalogMatrix] = useState<boolean>(false);
+function getAlertBoxSeverityClass(severity: string): string {
+  const s = (severity || '').toUpperCase();
+  if (s === 'CRITICAL') return 'alert-box critical';
+  if (s === 'WARNING') return 'alert-box warning';
+  if (s === 'CAUTION') return 'alert-box caution';
+  return 'alert-box advisory';
+}
 
-  if (!latestState) {
-    return (
-      <div className="panel-card">
-        <div className="panel-card-header">
-          <div className="panel-card-title">
-            Fault Investigation — {engineId}
-          </div>
-        </div>
-        <div style={{ color: '#94a3b8', padding: 12 }}>
-          Diagnostic state for {engineId}: <strong>Unavailable</strong>.
-        </div>
-      </div>
-    );
-  }
-
-  const probData = Object.entries(latestState.predicted.class_probabilities).map(
-    ([cls, prob]) => ({
-      fault_class: cls,
-      probability_pct: Number((prob * 100).toFixed(1)),
-    })
-  );
-
-  const sDiag = latestState.predicted.sensor_diagnosis;
-  const affectedSubsystem = mapFaultToSubsystemName(
-    latestState.predicted.predicted_fault_class
-  );
-
-  const handleAck = async (alertId: string, curAck: boolean) => {
-    await drishtiApi.acknowledgeAlert(alertId, !curAck);
-    await onRefreshEngine();
-  };
-
-  return (
-    <div>
-      <div className="screen-header">
-        <div className="screen-title-block">
-          <div className="screen-eyebrow">
-            Diagnostics · 9-Class Ensemble & Sensor-Fault Isolation
-          </div>
-          <h1 className="screen-title">
-            Fault Investigation & Root-Cause Evidence — {engineId}
-          </h1>
-          <div className="screen-desc">
-            9-Class Random Forest posterior probability distribution,
-            IsolationForest anomaly scoring, dedicated Sensor-Fault Isolator,
-            affected subsystem localization, and explainable maintenance
-            decision support.
-          </div>
-        </div>
-        <div className="screen-actions">
-          <span className="badge badge-synthetic">
-            DECISION SUPPORT ONLY — NOT CERTIFIED FLIGHT RELEASE
-          </span>
-        </div>
-      </div>
-
-      {/* 4 DIAGNOSTIC SUMMARY CARDS */}
-      <div className="grid-4">
-        <div className="kpi-card info">
-          <div className="kpi-label">Primary Diagnostic Classification</div>
-          <div className="kpi-value sm" style={{ color: '#38bdf8' }}>
-            {latestState.predicted.predicted_fault_class}
-          </div>
-          <div className="kpi-sub">
-            Confidence: {(latestState.predicted.top_probability * 100).toFixed(1)}%
-            · {latestState.predicted.diagnosis_certainty_status}
-          </div>
-        </div>
-
-        <div
-          className={`kpi-card ${
-            latestState.predicted.is_anomaly ? 'caution' : 'nominal'
-          }`}
-        >
-          <div className="kpi-label">Independent Anomaly Detector</div>
-          <div
-            className="kpi-value sm"
-            style={{
-              color: latestState.predicted.is_anomaly ? '#fbbf24' : '#4ade80',
-            }}
-          >
-            {latestState.predicted.is_anomaly ? 'ANOMALY ACTIVE' : 'NOMINAL'}
-          </div>
-          <div className="kpi-sub">
-            Score: {latestState.predicted.anomaly_score.toFixed(3)} (Thr:{' '}
-            {latestState.predicted.anomaly_threshold.toFixed(3)})
-          </div>
-        </div>
-
-        <div
-          className={`kpi-card ${
-            sDiag.is_sensor_fault_detected ? 'caution' : 'nominal'
-          }`}
-        >
-          <div className="kpi-label">Sensor vs Engine Fault Isolation</div>
-          <div
-            className="kpi-value sm"
-            style={{
-              color: sDiag.is_sensor_fault_detected
-                ? '#fbbf24'
-                : sDiag.is_ambiguous
-                ? '#fb923c'
-                : '#4ade80',
-            }}
-          >
-            {sDiag.diagnosis_status}
-          </div>
-          <div className="kpi-sub">
-            Suspected Channels:{' '}
-            {sDiag.suspected_channels.length > 0
-              ? sDiag.suspected_channels.join(', ')
-              : 'None'}
-          </div>
-        </div>
-
-        <div className="kpi-card info">
-          <div className="kpi-label">Affected Propulsion Subsystem</div>
-          <div
-            className="mono"
-            style={{
-              fontSize: 12.5,
-              fontWeight: 700,
-              color: '#ffffff',
-              marginBottom: 4,
-            }}
-          >
-            {affectedSubsystem}
-          </div>
-          <div className="kpi-sub">
-            Source: {latestState.data_source} (
-            {latestState.is_synthetic ? 'SIMULATED' : 'RECORDED'})
-          </div>
-        </div>
-      </div>
-
-      <div className="grid-2">
-        <div className="panel-card">
-          <div className="panel-card-header">
-            <div className="panel-card-title">
-              9-Class Fault Classifier Probability Distribution (%)
-            </div>
-          </div>
-          <div style={{ height: 250 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={probData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a2440" />
-                <XAxis
-                  type="number"
-                  domain={[0, 100]}
-                  stroke="#8899bb"
-                  unit="%"
-                />
-                <YAxis
-                  type="category"
-                  dataKey="fault_class"
-                  width={155}
-                  stroke="#8899bb"
-                  fontSize={11}
-                />
-                <Tooltip />
-                <Bar
-                  dataKey="probability_pct"
-                  name="Class Probability (%)"
-                  fill="#38bdf8"
-                  radius={[0, 3, 3, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="panel-card">
-          <div className="panel-card-header">
-            <div className="panel-card-title">
-              Sensor-Fault Isolator & Cross-Channel Evidence
-            </div>
-            <span className="badge badge-info">{sDiag.isolator_version}</span>
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            <div className="kpi-label">Isolation Findings</div>
-            {sDiag.evidence.map((ev, i) => (
-              <div
-                key={i}
-                className="mono"
-                style={{
-                  padding: '6px 8px',
-                  background: 'rgba(10, 15, 29, 0.8)',
-                  borderRadius: 3,
-                  marginBottom: 5,
-                  fontSize: 11,
-                }}
-              >
-                • {ev}
-              </div>
-            ))}
-          </div>
-          <div className="kpi-label">
-            Instantaneous Residual Deviations (Actual − Expected)
-          </div>
-          <table className="data-table mono">
-            <thead>
-              <tr>
-                <th>Parameter</th>
-                <th>Actual</th>
-                <th>Physics Expected</th>
-                <th>Residual</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>CHT (°C)</td>
-                <td>{latestState.actual.cht_c.toFixed(1)}</td>
-                <td>{latestState.expected.cht_c.toFixed(1)}</td>
-                <td>
-                  {latestState.calculated.cht_residual_c >= 0 ? '+' : ''}
-                  {latestState.calculated.cht_residual_c.toFixed(2)} °C
-                </td>
-              </tr>
-              <tr>
-                <td>EGT (°C)</td>
-                <td>{latestState.actual.egt_c.toFixed(1)}</td>
-                <td>{latestState.expected.egt_c.toFixed(1)}</td>
-                <td>
-                  {latestState.calculated.egt_residual_c >= 0 ? '+' : ''}
-                  {latestState.calculated.egt_residual_c.toFixed(2)} °C
-                </td>
-              </tr>
-              <tr>
-                <td>Oil Pressure (bar)</td>
-                <td>{latestState.actual.oil_pressure_bar.toFixed(2)}</td>
-                <td>{latestState.expected.oil_pressure_bar.toFixed(2)}</td>
-                <td>
-                  {latestState.calculated.oil_pressure_residual_bar >= 0
-                    ? '+'
-                    : ''}
-                  {latestState.calculated.oil_pressure_residual_bar.toFixed(3)}{' '}
-                  bar
-                </td>
-              </tr>
-              <tr>
-                <td>Vibration (mm/s)</td>
-                <td>{latestState.actual.vibration_rms_mms.toFixed(2)}</td>
-                <td>{latestState.expected.vibration_rms_mms.toFixed(2)}</td>
-                <td>
-                  {latestState.calculated.vibration_residual_mms >= 0 ? '+' : ''}
-                  {latestState.calculated.vibration_residual_mms.toFixed(3)} mm/s
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* EXPLAINABLE ALERT LOG & RECOMMENDED INVESTIGATION STEPS */}
-      <div className="panel-card">
-        <div className="panel-card-header">
-          <div className="panel-card-title">
-            <Wrench size={14} /> Explainable Alert Log & Recommended
-            Investigation Steps ({alerts.length} Alerts)
-          </div>
-          {catalog?.sih26054_eight_fault_categories && (
-            <button
-              className="btn btn-sm"
-              onClick={() => setShowCatalogMatrix((v) => !v)}
-            >
-              {showCatalogMatrix ? (
-                <>
-                  <ChevronUp size={12} /> Hide 8-Category Reference Matrix
-                </>
-              ) : (
-                <>
-                  <ChevronDown size={12} /> Show SIH26054 8-Fault Reference
-                  Matrix
-                </>
-              )}
-            </button>
-          )}
-        </div>
-        {alerts.length === 0 ? (
-          <div style={{ color: '#94a3b8', padding: '8px 0' }}>
-            No alerts triggered for this engine mission. All residuals are
-            within nominal physics reference envelopes.
-          </div>
-        ) : (
-          alerts.slice(0, 12).map((alt) => (
-            <div
-              key={alt.alert_id}
-              className={`alert-box ${alt.severity.toLowerCase()}`}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 6,
-                  flexWrap: 'wrap',
-                  gap: 8,
-                }}
-              >
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span className={statusBadgeClass(alt.severity)}>
-                    {alt.severity}
-                  </span>
-                  <strong className="mono">{alt.alert_id}</strong>
-                  <span>|</span>
-                  <strong>{alt.fault_class}</strong>
-                  <span className="badge badge-info">{alt.anomaly_type}</span>
-                  <span className="badge badge-synthetic">
-                    {mapFaultToSubsystemName(alt.fault_class).split('·')[0]}
-                  </span>
-                  {alt.acknowledged && (
-                    <span className="badge badge-nominal">ACKNOWLEDGED</span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span
-                    className="mono"
-                    style={{ fontSize: 11, color: '#94a3b8' }}
-                  >
-                    {alt.timestamp} | Seq #{alt.sequence_number}
-                  </span>
-                  <button
-                    className="btn btn-sm"
-                    onClick={() => handleAck(alt.alert_id, alt.acknowledged)}
-                  >
-                    <CheckCircle2 size={11} />{' '}
-                    {alt.acknowledged ? 'Unacknowledge' : 'Acknowledge'}
-                  </button>
-                </div>
-              </div>
-              <div
-                className="mono"
-                style={{ fontSize: 11, color: '#cbd5e1', marginBottom: 6 }}
-              >
-                <strong>Model Output & Score:</strong> {alt.score_label} |{' '}
-                {alt.model_version} / {alt.rule_version}
-              </div>
-              <div style={{ marginBottom: 6 }}>
-                {alt.supporting_evidence.map((ev, idx) => (
-                  <div key={idx} style={{ fontSize: 11.5, color: '#e2e8f0' }}>
-                    • {ev}
-                  </div>
-                ))}
-              </div>
-              <div
-                style={{
-                  background: 'rgba(2, 132, 199, 0.1)',
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
-                  padding: '6px 10px',
-                  borderRadius: 3,
-                  marginBottom: 4,
-                  color: '#38bdf8',
-                  fontSize: 11.5,
-                }}
-              >
-                <strong>Recommended Investigation Action:</strong>{' '}
-                {alt.recommended_action}
-              </div>
-              <div className="mono" style={{ fontSize: 10.5, color: '#94a3b8' }}>
-                {alt.evidence_source_statement} | Data Quality:{' '}
-                {alt.data_quality_limitations.join('; ')}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* SIH26054 OFFICIAL 8-FAULT-CATEGORY EVIDENCE MAPPING (ON DEMAND) */}
-      {showCatalogMatrix && catalog?.sih26054_eight_fault_categories && (
-        <div className="panel-card">
-          <div className="panel-card-header">
-            <div className="panel-card-title">
-              <Info size={13} /> SIH26054 Official 8-Fault-Category Evidence &
-              Detection Pathway Matrix
-            </div>
-            <span className="badge badge-info">
-              ALL 8 INTENDED FAULT CATEGORIES MAPPED
-            </span>
-          </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="data-table mono" style={{ fontSize: 11 }}>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Official SIH26054 Category</th>
-                  <th>Mapped DRISHTI Class(es)</th>
-                  <th>Detection Pathway</th>
-                  <th>Primary Sensor Evidence</th>
-                  <th>Engineering Rationale & Limitations</th>
-                </tr>
-              </thead>
-              <tbody>
-                {catalog.sih26054_eight_fault_categories.map((fc: any) => (
-                  <tr key={fc.category_id}>
-                    <td>#{fc.category_id}</td>
-                    <td>
-                      <strong style={{ color: '#38bdf8' }}>
-                        {fc.sih_problem_statement_category}
-                      </strong>
-                    </td>
-                    <td>{(fc.mapped_ml_fault_classes || []).join(', ')}</td>
-                    <td>{fc.detection_pathway}</td>
-                    <td>{(fc.primary_sensor_evidence || []).join('; ')}</td>
-                    <td style={{ color: '#94a3b8' }}>
-                      {fc.causal_rationale} <em>({fc.limitation_disclosure})</em>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* UNCERTAINTY AND KNOWN LIMITATIONS DISCLOSURE */}
-      <div className="panel-card">
-        <div className="panel-card-header">
-          <div className="panel-card-title">
-            <Info size={13} /> Diagnostic Uncertainty & Known Limitations
-          </div>
-        </div>
-        <div
-          className="mono"
-          style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.65 }}
-        >
-          <div>
-            • <strong>“Coding Degradation” → Cooling Degradation Interpretation:</strong>{' '}
-            The official SIH26054 text lists “Coding degradation” among
-            propulsion faults. In aero-piston thermodynamics, this is documented
-            and modeled as <strong>Cooling Degradation</strong> (cooling baffle
-            obstruction / fin fouling reducing heat rejection efficiency η_cool
-            and driving positive CHT/Oil-T residuals).
-          </div>
-          <div>
-            • <strong>Aggregate Sensor Scope:</strong> Telemetry schema v1.0.0
-            provides single-channel engine CHT, EGT, Oil P/T, and Vibration RMS.
-            Faults cannot be localized to a specific cylinder (#1–#4) without
-            per-cylinder thermocouple instrumentation.
-          </div>
-          <div>
-            • <strong>Correlation vs. Causation:</strong> IsolationForest anomaly
-            triggers indicate statistical residual deviation from the physics
-            reference baseline; physical fault confirmation requires the
-            recommended borescope/mechanical inspection action above.
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+function mapAlertSeverityToScrubber(
+  severity: string
+): 'nominal' | 'caution' | 'warning' | 'critical' {
+  const s = (severity || '').toUpperCase();
+  if (s === 'CRITICAL') return 'critical';
+  if (s === 'WARNING') return 'warning';
+  if (s === 'CAUTION') return 'caution';
+  return 'nominal';
+}
 
 /* =========================================================================
    SCREEN 5: 6-STEP GUIDED MISSION & FAULT SIMULATOR WORKFLOW
@@ -542,13 +112,21 @@ const SIM_STEPS = [
 
 export const MissionSimulatorScreen: React.FC<{
   selectedEngineId: string;
-  catalog: Record<string, any> | null;
+  catalog: Record<string, unknown> | null;
+  backendError?: string | null;
+  onRefreshBackend?: () => void;
   onSimulationCompleted: (
     engineId: string,
     missionId: string,
     reportId: string
   ) => Promise<void>;
-}> = ({ selectedEngineId, catalog, onSimulationCompleted }) => {
+}> = ({
+  selectedEngineId,
+  catalog,
+  backendError = null,
+  onRefreshBackend,
+  onSimulationCompleted,
+}) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
 
@@ -572,14 +150,14 @@ export const MissionSimulatorScreen: React.FC<{
   });
 
   const [running, setRunning] = useState(false);
-  const [simResult, setSimResult] = useState<Record<string, any> | null>(null);
+  const [simResult, setSimResult] = useState<SimulationResultData | null>(null);
   const [simError, setSimError] = useState<string | null>(null);
 
   useEffect(() => {
     setConfig((prev) => ({ ...prev, engine_id: selectedEngineId }));
   }, [selectedEngineId]);
 
-  const applyPreset = (preset: Record<string, any>) => {
+  const applyPreset = (preset: MissionPresetItem) => {
     setConfig((prev) => ({
       ...prev,
       scenario_id: `SIM-${preset.preset_id.toUpperCase()}`,
@@ -600,7 +178,9 @@ export const MissionSimulatorScreen: React.FC<{
     setRunning(true);
     setSimError(null);
     try {
-      const res = await drishtiApi.runSimulation(config);
+      const res = (await drishtiApi.runSimulation(
+        config
+      )) as unknown as SimulationResultData;
       setSimResult(res);
       await onSimulationCompleted(
         config.engine_id,
@@ -608,39 +188,95 @@ export const MissionSimulatorScreen: React.FC<{
         res.report_id
       );
       setCurrentStep(6);
-    } catch (err: any) {
-      setSimError(err.message);
+    } catch (err: unknown) {
+      setSimError(
+        err instanceof Error ? err.message : 'Simulation execution failed.'
+      );
     } finally {
       setRunning(false);
     }
   };
 
-  const faultClasses: string[] = catalog?.fault_classes || [
-    'Normal',
-    'Cylinder Overheating',
-    'Oil Pressure Drop',
-    'Crankshaft Bearing Wear',
-    'Cylinder Misfire',
-    'Sensor Fault',
-    'Piston Ring Wear',
-    'Valve Clearance Issue',
-    'Fuel Injector Clogging',
-  ];
+  const faultClasses: string[] = Array.isArray(catalog?.fault_classes)
+    ? (catalog.fault_classes as string[])
+    : [
+        'Normal',
+        'Cylinder Overheating',
+        'Oil Pressure Drop',
+        'Crankshaft Bearing Wear',
+        'Cylinder Misfire',
+        'Sensor Fault',
+        'Piston Ring Wear',
+        'Valve Clearance Issue',
+        'Fuel Injector Clogging',
+      ];
 
-  const presets: Record<string, any>[] = catalog?.mission_presets || [];
+  const presets: MissionPresetItem[] = Array.isArray(catalog?.mission_presets)
+    ? (catalog.mission_presets as MissionPresetItem[])
+    : [];
 
-  const simTrendData = (simResult?.telemetry || []).map(
-    (t: FourValueDigitalTwinState) => ({
-      elapsed: t.mission_elapsed_sec,
-      cht_actual: t.actual.cht_c,
-      cht_expected: t.expected.cht_c,
-      oil_p_actual: t.actual.oil_pressure_bar,
-      oil_p_expected: t.expected.oil_pressure_bar,
-      vib_actual: t.actual.vibration_rms_mms,
-      vib_expected: t.expected.vibration_rms_mms,
-      hi: t.predicted.health_index,
-    })
+  const transformationsMap = (catalog?.fault_signal_transformations ||
+    {}) as Record<string, { description?: string }>;
+  const activeTransformDesc =
+    transformationsMap[config.fault_class]?.description || null;
+
+  const simTrendData = useMemo(
+    () =>
+      (simResult?.telemetry || []).map((t: FourValueDigitalTwinState) => ({
+        elapsed: t.mission_elapsed_sec,
+        cht_actual: t.actual.cht_c,
+        cht_expected: t.expected.cht_c,
+        oil_p_actual: t.actual.oil_pressure_bar,
+        oil_p_expected: t.expected.oil_pressure_bar,
+        vib_actual: t.actual.vibration_rms_mms,
+        vib_expected: t.expected.vibration_rms_mms,
+        hi: t.predicted.health_index,
+      })),
+    [simResult]
   );
+
+  if (backendError && !catalog) {
+    return (
+      <GlassPanel className="panel-card">
+        <EmptyState
+          icon={<ShieldAlert size={32} />}
+          title="Mission Simulator Offline"
+          description={backendError}
+          action={
+            onRefreshBackend ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={onRefreshBackend}
+              >
+                Retry Connection
+              </button>
+            ) : undefined
+          }
+        />
+      </GlassPanel>
+    );
+  }
+
+  if (!catalog) {
+    return (
+      <GlassPanel className="panel-card">
+        <Skeleton variant="text" width="40%" height={24} />
+        <Skeleton
+          variant="rect"
+          width="100%"
+          height={64}
+          style={{ marginTop: 12 }}
+        />
+        <Skeleton
+          variant="rect"
+          width="100%"
+          height={220}
+          style={{ marginTop: 12 }}
+        />
+      </GlassPanel>
+    );
+  }
 
   return (
     <div>
@@ -650,19 +286,19 @@ export const MissionSimulatorScreen: React.FC<{
           <div className="screen-eyebrow">
             Operations · 6-Step Guided Deterministic Scenario Workflow
           </div>
-          <h1 className="screen-title">
-            Mission & 9-Class Fault Simulator
-          </h1>
+          <h1 className="screen-title">Mission &amp; 9-Class Fault Simulator</h1>
           <div className="screen-desc">
             Step-by-step deterministic fault injection synchronized with the 3D
             Digital Twin, physics reference baseline, and SQLite mission store.
           </div>
         </div>
         <div className="screen-actions">
-          <span className="badge badge-synthetic">
-            SYNTHETIC SCENARIO GENERATOR (SEED {config.random_seed})
-          </span>
+          <SyntheticBadge
+            isSynthetic={true}
+            label={`SYNTHETIC SCENARIO GENERATOR (SEED ${config.random_seed})`}
+          />
           <button
+            type="button"
             className="btn btn-primary"
             onClick={handleRunSimulation}
             disabled={running}
@@ -675,7 +311,11 @@ export const MissionSimulatorScreen: React.FC<{
       </div>
 
       {/* 6-STEP WIZARD BAR */}
-      <div className="wizard-steps" role="tablist" aria-label="Simulator Workflow Steps">
+      <div
+        className="wizard-steps"
+        role="tablist"
+        aria-label="Simulator Workflow Steps"
+      >
         {SIM_STEPS.map((s) => {
           const isCompleted =
             s.step < currentStep || (s.step === 6 && simResult !== null);
@@ -709,12 +349,13 @@ export const MissionSimulatorScreen: React.FC<{
 
       {/* STEP 1: SELECT ENGINE AND MISSION PROFILE */}
       {currentStep === 1 && (
-        <div className="panel-card">
+        <GlassPanel className="panel-card">
           <div className="panel-card-header">
             <div className="panel-card-title">
-              <Cpu size={14} /> Step 1 — Select Target Engine & Mission Profile
+              <Cpu size={14} /> Step 1 — Select Target Engine &amp; Mission
+              Profile
             </div>
-            <span className="badge badge-info">STEP 1 OF 6</span>
+            <StatusChip status="nominal" label="STEP 1 OF 6" />
           </div>
 
           {presets.length > 0 && (
@@ -726,6 +367,7 @@ export const MissionSimulatorScreen: React.FC<{
                 {presets.map((p) => (
                   <button
                     key={p.preset_id}
+                    type="button"
                     className="btn btn-sm"
                     onClick={() => applyPreset(p)}
                   >
@@ -806,24 +448,25 @@ export const MissionSimulatorScreen: React.FC<{
             }}
           >
             <button
+              type="button"
               className="btn btn-primary"
               onClick={() => setCurrentStep(2)}
             >
-              Next: Operating Conditions & Fault <ArrowRight size={13} />
+              Next: Operating Conditions &amp; Fault <ArrowRight size={13} />
             </button>
           </div>
-        </div>
+        </GlassPanel>
       )}
 
       {/* STEP 2: SELECT OPERATING CONDITIONS AND DIAGNOSTIC FAULT */}
       {currentStep === 2 && (
-        <div className="panel-card">
+        <GlassPanel className="panel-card">
           <div className="panel-card-header">
             <div className="panel-card-title">
-              <Sliders size={14} /> Step 2 — Select Operating Conditions &
+              <Sliders size={14} /> Step 2 — Select Operating Conditions &amp;
               Diagnostic Fault Mode
             </div>
-            <span className="badge badge-info">STEP 2 OF 6</span>
+            <StatusChip status="nominal" label="STEP 2 OF 6" />
           </div>
 
           <div className="form-grid">
@@ -964,7 +607,7 @@ export const MissionSimulatorScreen: React.FC<{
             </div>
           </div>
 
-          {catalog?.fault_signal_transformations?.[config.fault_class] && (
+          {activeTransformDesc && (
             <div
               style={{
                 marginTop: 12,
@@ -973,16 +616,11 @@ export const MissionSimulatorScreen: React.FC<{
                 border: '1px solid rgba(56, 189, 248, 0.25)',
                 borderRadius: 4,
                 fontSize: 12,
-                color: '#cbd5e1',
+                color: 'var(--text-secondary)',
               }}
             >
-              <strong>
-                Physics Transfer Function ({config.fault_class}):
-              </strong>{' '}
-              {
-                catalog.fault_signal_transformations[config.fault_class]
-                  .description
-              }
+              <strong>Physics Transfer Function ({config.fault_class}):</strong>{' '}
+              {activeTransformDesc}
             </div>
           )}
 
@@ -993,28 +631,33 @@ export const MissionSimulatorScreen: React.FC<{
               marginTop: 18,
             }}
           >
-            <button className="btn" onClick={() => setCurrentStep(1)}>
-              <ArrowLeft size={13} /> Back: Engine & Profile
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setCurrentStep(1)}
+            >
+              <ArrowLeft size={13} /> Back: Engine &amp; Profile
             </button>
             <button
+              type="button"
               className="btn btn-primary"
               onClick={() => setCurrentStep(3)}
             >
-              Next: Severity & Onset <ArrowRight size={13} />
+              Next: Severity &amp; Onset <ArrowRight size={13} />
             </button>
           </div>
-        </div>
+        </GlassPanel>
       )}
 
       {/* STEP 3: CONFIGURE FAULT SEVERITY AND ONSET (WITH PROGRESSIVE DISCLOSURE) */}
       {currentStep === 3 && (
-        <div className="panel-card">
+        <GlassPanel className="panel-card">
           <div className="panel-card-header">
             <div className="panel-card-title">
-              <Sliders size={14} /> Step 3 — Configure Fault Severity & Onset
+              <Sliders size={14} /> Step 3 — Configure Fault Severity &amp; Onset
               Timing
             </div>
-            <span className="badge badge-info">STEP 3 OF 6</span>
+            <StatusChip status="nominal" label="STEP 3 OF 6" />
           </div>
 
           <div className="form-grid">
@@ -1054,7 +697,8 @@ export const MissionSimulatorScreen: React.FC<{
                 }
               />
               <span className="form-hint">
-                Timestamp when fault injection begins (t=0..{config.duration_sec}s)
+                Timestamp when fault injection begins (t=0..{config.duration_sec}
+                s)
               </span>
             </div>
 
@@ -1078,6 +722,7 @@ export const MissionSimulatorScreen: React.FC<{
           {/* Progressive Disclosure for Advanced Reproducibility Settings */}
           <div style={{ marginTop: 14 }}>
             <button
+              type="button"
               className="btn btn-sm"
               onClick={() => setShowAdvanced((v) => !v)}
             >
@@ -1088,7 +733,7 @@ export const MissionSimulatorScreen: React.FC<{
               ) : (
                 <>
                   <ChevronDown size={12} /> Show Advanced Reproducibility
-                  Controls (Seed & Sampling)
+                  Controls (Seed &amp; Sampling)
                 </>
               )}
             </button>
@@ -1153,28 +798,33 @@ export const MissionSimulatorScreen: React.FC<{
               marginTop: 18,
             }}
           >
-            <button className="btn" onClick={() => setCurrentStep(2)}>
-              <ArrowLeft size={13} /> Back: Conditions & Fault
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setCurrentStep(2)}
+            >
+              <ArrowLeft size={13} /> Back: Conditions &amp; Fault
             </button>
             <button
+              type="button"
               className="btn btn-primary"
               onClick={() => setCurrentStep(4)}
             >
               Next: Review Scenario Summary <ArrowRight size={13} />
             </button>
           </div>
-        </div>
+        </GlassPanel>
       )}
 
       {/* STEP 4: REVIEW CONCISE SCENARIO SUMMARY */}
       {currentStep === 4 && (
-        <div className="panel-card">
+        <GlassPanel className="panel-card">
           <div className="panel-card-header">
             <div className="panel-card-title">
               <CheckCircle2 size={14} /> Step 4 — Concise Scenario Configuration
               Summary
             </div>
-            <span className="badge badge-info">STEP 4 OF 6</span>
+            <StatusChip status="nominal" label="STEP 4 OF 6" />
           </div>
 
           <div className="grid-3">
@@ -1186,7 +836,7 @@ export const MissionSimulatorScreen: React.FC<{
                 border: '1px solid var(--border-subtle)',
               }}
             >
-              <div className="kpi-label">1. Target & Profile</div>
+              <div className="kpi-label">1. Target &amp; Profile</div>
               <div className="mono" style={{ fontSize: 12, lineHeight: 1.8 }}>
                 <div>
                   Engine ID: <strong>{config.engine_id}</strong>
@@ -1240,7 +890,7 @@ export const MissionSimulatorScreen: React.FC<{
               <div className="mono" style={{ fontSize: 12, lineHeight: 1.8 }}>
                 <div>
                   Fault Class:{' '}
-                  <strong style={{ color: '#38bdf8' }}>
+                  <strong style={{ color: 'var(--cyan)' }}>
                     {config.fault_class}
                   </strong>
                 </div>
@@ -1254,7 +904,10 @@ export const MissionSimulatorScreen: React.FC<{
                   </strong>
                 </div>
                 <div>
-                  Subsystem: <strong>{mapFaultToSubsystemName(config.fault_class).split('·')[0]}</strong>
+                  Subsystem:{' '}
+                  <strong>
+                    {mapFaultToSubsystemName(config.fault_class).split('·')[0]}
+                  </strong>
                 </div>
               </div>
             </div>
@@ -1267,37 +920,54 @@ export const MissionSimulatorScreen: React.FC<{
               marginTop: 18,
             }}
           >
-            <button className="btn" onClick={() => setCurrentStep(3)}>
-              <ArrowLeft size={13} /> Back: Severity & Onset
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setCurrentStep(3)}
+            >
+              <ArrowLeft size={13} /> Back: Severity &amp; Onset
             </button>
             <button
+              type="button"
               className="btn btn-primary"
               onClick={() => setCurrentStep(5)}
             >
               Proceed to Step 5: Execute Simulation <ArrowRight size={13} />
             </button>
           </div>
-        </div>
+        </GlassPanel>
       )}
 
       {/* STEP 5: EXECUTE DETERMINISTIC SIMULATION */}
       {currentStep === 5 && (
-        <div className="panel-card" style={{ textAlign: 'center', padding: 28 }}>
+        <GlassPanel
+          className="panel-card"
+          style={{ textAlign: 'center', padding: 28 }}
+        >
           <div style={{ maxWidth: 580, margin: '0 auto' }}>
-            <span className="badge badge-info" style={{ marginBottom: 10 }}>
-              STEP 5 OF 6 · READY FOR EXECUTION
-            </span>
+            <div style={{ marginBottom: 10 }}>
+              <StatusChip
+                status="nominal"
+                label="STEP 5 OF 6 · READY FOR EXECUTION"
+              />
+            </div>
             <h2
               style={{
                 fontSize: 18,
                 fontWeight: 700,
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 marginBottom: 8,
               }}
             >
               Execute Deterministic Digital Twin Simulation
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: 12.5, marginBottom: 18 }}>
+            <p
+              style={{
+                color: 'var(--text-secondary)',
+                fontSize: 12.5,
+                marginBottom: 18,
+              }}
+            >
               Running this scenario will generate{' '}
               <strong>
                 {Math.round(config.duration_sec / config.sample_interval_sec)}
@@ -1317,10 +987,15 @@ export const MissionSimulatorScreen: React.FC<{
                 flexWrap: 'wrap',
               }}
             >
-              <button className="btn" onClick={() => setCurrentStep(4)}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setCurrentStep(4)}
+              >
                 <ArrowLeft size={13} /> Back to Summary
               </button>
               <button
+                type="button"
                 className="btn btn-primary"
                 onClick={handleRunSimulation}
                 disabled={running}
@@ -1333,40 +1008,43 @@ export const MissionSimulatorScreen: React.FC<{
               </button>
             </div>
           </div>
-        </div>
+        </GlassPanel>
       )}
 
       {/* STEP 6: PRESENT RESULTS WITH BASELINE-VS-SCENARIO COMPARISON, PARAMETER TRENDS, FAULT DIAGNOSIS & HEALTH IMPACT */}
       {currentStep === 6 && (
         <div>
           {!simResult ? (
-            <div className="panel-card">
-              <div style={{ color: '#94a3b8', marginBottom: 12 }}>
-                No simulation has been executed in this session yet. Click below
-                to run the configured scenario and inspect Baseline-vs-Scenario
-                results.
-              </div>
-              <button
-                className="btn btn-primary"
-                onClick={handleRunSimulation}
-                disabled={running}
-              >
-                <Play size={13} />{' '}
-                {running ? 'Executing…' : 'Execute Configured Simulation'}
-              </button>
-            </div>
-          ) : (
-            <div className="panel-card" style={{ borderColor: '#38bdf8' }}>
-              <div className="panel-card-header">
-                <div className="panel-card-title" style={{ color: '#38bdf8' }}>
-                  Step 6 — Simulation Execution Results & Baseline Comparison:{' '}
-                  {simResult.simulation_id} (Report: {simResult.report_id})
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <span className="badge badge-nominal">
-                    COMPLETED & PERSISTED
-                  </span>
+            <GlassPanel className="panel-card">
+              <EmptyState
+                icon={<Play size={28} />}
+                title="No Simulation Executed Yet"
+                description="Click below to run the configured scenario and inspect Baseline-vs-Scenario results."
+                action={
                   <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleRunSimulation}
+                    disabled={running}
+                  >
+                    <Play size={13} />{' '}
+                    {running ? 'Executing…' : 'Execute Configured Simulation'}
+                  </button>
+                }
+              />
+            </GlassPanel>
+          ) : (
+            <GlassPanel className="panel-card" glow="cyan">
+              <div className="panel-card-header">
+                <div className="panel-card-title" style={{ color: 'var(--cyan)' }}>
+                  Step 6 — Simulation Execution Results &amp; Baseline
+                  Comparison: {simResult.simulation_id} (Report:{' '}
+                  {simResult.report_id})
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <StatusChip status="nominal" label="COMPLETED & PERSISTED" />
+                  <button
+                    type="button"
                     className="btn btn-sm"
                     onClick={() => setCurrentStep(1)}
                   >
@@ -1377,50 +1055,51 @@ export const MissionSimulatorScreen: React.FC<{
 
               {/* 4 SUMMARY KPI CARDS */}
               <div className="grid-4">
-                <div className="kpi-card info">
-                  <div className="kpi-label">Generated Frames</div>
-                  <div className="kpi-value sm">
-                    {simResult.summary.total_frames} Frames
-                  </div>
-                  <div className="kpi-sub">
-                    Throughput: {simResult.summary.processing_throughput_fps} fps
-                  </div>
-                </div>
-
-                <div className="kpi-card caution">
-                  <div className="kpi-label">Final Predicted Fault Class</div>
-                  <div className="kpi-value sm" style={{ color: '#38bdf8' }}>
-                    {simResult.summary.final_predicted_class}
-                  </div>
-                  <div className="kpi-sub">
-                    Confidence:{' '}
-                    {(simResult.summary.final_top_probability * 100).toFixed(1)}%
-                  </div>
-                </div>
-
-                <div className="kpi-card critical">
-                  <div className="kpi-label">Health Index Impact</div>
-                  <div className="kpi-value sm">
-                    {simResult.summary.initial_health_index.toFixed(1)}% →{' '}
-                    {simResult.summary.final_health_index.toFixed(1)}%
-                  </div>
-                  <div className="kpi-sub">
-                    Alerts Triggered: {simResult.summary.alert_count}
-                  </div>
-                </div>
-
-                <div className="kpi-card info">
-                  <div className="kpi-label">Post-Scenario RUL Estimate</div>
-                  <div className="kpi-value sm">
-                    {simResult.summary.final_rul_status === 'ESTIMATED' &&
+                <KpiTile
+                  label="Generated Frames"
+                  value={simResult.summary.total_frames}
+                  precision={0}
+                  unit="Frames"
+                  status="info"
+                  subtext={`Throughput: ${simResult.summary.processing_throughput_fps} fps`}
+                />
+                <KpiTile
+                  label="Final Predicted Fault Class"
+                  value={simResult.summary.final_predicted_class}
+                  status={
+                    simResult.summary.final_predicted_class === 'Normal'
+                      ? 'nominal'
+                      : 'caution'
+                  }
+                  subtext={`Confidence: ${(
+                    simResult.summary.final_top_probability * 100
+                  ).toFixed(1)}%`}
+                />
+                <KpiTile
+                  label="Health Index Impact"
+                  value={`${simResult.summary.initial_health_index.toFixed(
+                    1
+                  )}% → ${simResult.summary.final_health_index.toFixed(1)}%`}
+                  status={
+                    simResult.summary.final_health_index < 55
+                      ? 'critical'
+                      : simResult.summary.final_health_index < 75
+                      ? 'caution'
+                      : 'nominal'
+                  }
+                  subtext={`Alerts Triggered: ${simResult.summary.alert_count}`}
+                />
+                <KpiTile
+                  label="Post-Scenario RUL Estimate"
+                  value={
+                    simResult.summary.final_rul_status === 'ESTIMATED' &&
                     simResult.summary.final_rul_hours !== null
                       ? `${simResult.summary.final_rul_hours.toFixed(1)} hrs`
-                      : 'NOT ESTIMABLE'}
-                  </div>
-                  <div className="kpi-sub">
-                    Mean Latency: {simResult.summary.mean_frame_latency_ms} ms
-                  </div>
-                </div>
+                      : 'NOT ESTIMABLE'
+                  }
+                  status="info"
+                  subtext={`Mean Latency: ${simResult.summary.mean_frame_latency_ms} ms`}
+                />
               </div>
 
               {/* 3D VIEWPORT OF FINAL SCENARIO STATE */}
@@ -1433,10 +1112,13 @@ export const MissionSimulatorScreen: React.FC<{
                 <div style={{ marginBottom: 14 }}>
                   <div className="kpi-label" style={{ marginBottom: 6 }}>
                     Baseline (Nominal Physics Reference / Initial State) vs.
-                    Post-Scenario Outcome Comparison
+                    Post-Scenario Outcome Comparison (Alert Bands: alert_engine.py)
                   </div>
                   <div style={{ overflowX: 'auto' }}>
-                    <table className="data-table mono" style={{ fontSize: 11.5 }}>
+                    <table
+                      className="data-table mono"
+                      style={{ fontSize: 11.5 }}
+                    >
                       <thead>
                         <tr>
                           <th>Parameter / Metric</th>
@@ -1454,7 +1136,18 @@ export const MissionSimulatorScreen: React.FC<{
                           <td>
                             {simResult.latest_state.actual.cht_c.toFixed(1)} °C
                           </td>
-                          <td style={{ color: '#fbbf24', fontWeight: 700 }}>
+                          <td
+                            style={{
+                              color:
+                                Math.abs(
+                                  simResult.latest_state.calculated
+                                    .cht_residual_c
+                                ) >= RESIDUAL_ALERT_THRESHOLDS.cht_c
+                                  ? 'var(--color-caution)'
+                                  : 'var(--color-nominal)',
+                              fontWeight: 700,
+                            }}
+                          >
                             {simResult.latest_state.calculated.cht_residual_c >=
                             0
                               ? '+'
@@ -1474,7 +1167,17 @@ export const MissionSimulatorScreen: React.FC<{
                           <td>
                             {simResult.latest_state.actual.egt_c.toFixed(1)} °C
                           </td>
-                          <td>
+                          <td
+                            style={{
+                              color:
+                                Math.abs(
+                                  simResult.latest_state.calculated
+                                    .egt_residual_c
+                                ) >= RESIDUAL_ALERT_THRESHOLDS.egt_c
+                                  ? 'var(--color-caution)'
+                                  : 'var(--text-primary)',
+                            }}
+                          >
                             {simResult.latest_state.calculated.egt_residual_c >=
                             0
                               ? '+'
@@ -1499,7 +1202,16 @@ export const MissionSimulatorScreen: React.FC<{
                             )}{' '}
                             bar
                           </td>
-                          <td>
+                          <td
+                            style={{
+                              color:
+                                simResult.latest_state.calculated
+                                  .oil_pressure_residual_bar <=
+                                RESIDUAL_ALERT_THRESHOLDS.oil_pressure_bar
+                                  ? 'var(--color-critical)'
+                                  : 'var(--text-primary)',
+                            }}
+                          >
                             {simResult.latest_state.calculated
                               .oil_pressure_residual_bar >= 0
                               ? '+'
@@ -1524,7 +1236,16 @@ export const MissionSimulatorScreen: React.FC<{
                             )}{' '}
                             mm/s
                           </td>
-                          <td>
+                          <td
+                            style={{
+                              color:
+                                simResult.latest_state.calculated
+                                  .vibration_residual_mms >=
+                                RESIDUAL_ALERT_THRESHOLDS.vibration_mms
+                                  ? 'var(--color-caution)'
+                                  : 'var(--text-primary)',
+                            }}
+                          >
                             {simResult.latest_state.calculated
                               .vibration_residual_mms >= 0
                               ? '+'
@@ -1542,10 +1263,15 @@ export const MissionSimulatorScreen: React.FC<{
                             (t = 0s)
                           </td>
                           <td>
-                            {simResult.summary.final_health_index.toFixed(1)}% (t
-                            = end)
+                            {simResult.summary.final_health_index.toFixed(1)}%
+                            (t = end)
                           </td>
-                          <td style={{ color: '#f87171', fontWeight: 700 }}>
+                          <td
+                            style={{
+                              color: 'var(--color-critical)',
+                              fontWeight: 700,
+                            }}
+                          >
                             {(
                               simResult.summary.final_health_index -
                               simResult.summary.initial_health_index
@@ -1562,7 +1288,7 @@ export const MissionSimulatorScreen: React.FC<{
               {/* PARAMETER TRENDS ACROSS SIMULATED MISSION */}
               {simTrendData.length > 0 && (
                 <div className="grid-2">
-                  <div className="panel-card" style={{ marginBottom: 0 }}>
+                  <GlassPanel className="panel-card" style={{ marginBottom: 0 }}>
                     <div className="panel-card-header">
                       <div className="panel-card-title">
                         <Activity size={13} /> Scenario Thermal Response: Actual
@@ -1574,15 +1300,15 @@ export const MissionSimulatorScreen: React.FC<{
                         <LineChart data={simTrendData}>
                           <CartesianGrid
                             strokeDasharray="3 3"
-                            stroke="#1a2440"
+                            stroke="var(--border-subtle, #1a2440)"
                           />
                           <XAxis
                             dataKey="elapsed"
-                            stroke="#8899bb"
+                            stroke="var(--text-muted, #8899bb)"
                             unit="s"
                           />
                           <YAxis
-                            stroke="#8899bb"
+                            stroke="var(--text-muted, #8899bb)"
                             domain={['auto', 'auto']}
                             unit="°C"
                           />
@@ -1607,13 +1333,13 @@ export const MissionSimulatorScreen: React.FC<{
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
-                  </div>
+                  </GlassPanel>
 
-                  <div className="panel-card" style={{ marginBottom: 0 }}>
+                  <GlassPanel className="panel-card" style={{ marginBottom: 0 }}>
                     <div className="panel-card-header">
                       <div className="panel-card-title">
-                        <Activity size={13} /> Scenario Health Index & Vibration
-                        Trajectory
+                        <Activity size={13} /> Scenario Health Index &amp;
+                        Vibration Trajectory
                       </div>
                     </div>
                     <div style={{ height: 200 }}>
@@ -1621,14 +1347,17 @@ export const MissionSimulatorScreen: React.FC<{
                         <LineChart data={simTrendData}>
                           <CartesianGrid
                             strokeDasharray="3 3"
-                            stroke="#1a2440"
+                            stroke="var(--border-subtle, #1a2440)"
                           />
                           <XAxis
                             dataKey="elapsed"
-                            stroke="#8899bb"
+                            stroke="var(--text-muted, #8899bb)"
                             unit="s"
                           />
-                          <YAxis stroke="#8899bb" domain={['auto', 'auto']} />
+                          <YAxis
+                            stroke="var(--text-muted, #8899bb)"
+                            domain={['auto', 'auto']}
+                          />
                           <Tooltip />
                           <Legend />
                           <Line
@@ -1650,10 +1379,10 @@ export const MissionSimulatorScreen: React.FC<{
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
-                  </div>
+                  </GlassPanel>
                 </div>
               )}
-            </div>
+            </GlassPanel>
           )}
         </div>
       )}
@@ -1665,25 +1394,37 @@ export const MissionSimulatorScreen: React.FC<{
    SCREEN 6: HISTORICAL MISSION REPLAY (SYNCHRONIZED 3D + CHARTS + ALERTS)
    ========================================================================= */
 export const HistoricalMissionReplayScreen: React.FC<{
-  missions: Record<string, any>[];
-}> = ({ missions }) => {
+  missions: MissionRecordItem[];
+  backendError?: string | null;
+  onRefreshBackend?: () => void;
+}> = ({ missions, backendError = null, onRefreshBackend }) => {
   const [selectedMissionId, setSelectedMissionId] = useState<string>(
     missions[0]?.mission_id || 'MSN-DESERT-102'
   );
   const [snapshot, setSnapshot] = useState<ReplaySnapshot | null>(null);
   const [speed, setSpeed] = useState<number>(1.0);
   const [playingLocal, setPlayingLocal] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    let active = true;
+    setLoading(true);
     drishtiApi
       .getReplayStatus()
       .then((s) => {
+        if (!active) return;
         if (s && s.mission_id) {
           setSnapshot(s);
           setSelectedMissionId(s.mission_id);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -1707,13 +1448,18 @@ export const HistoricalMissionReplayScreen: React.FC<{
   }, [playingLocal, speed]);
 
   const handleLoadAndStart = async (startIdx = 0, autoPlay = true) => {
-    const snap = await drishtiApi.startReplay(
-      selectedMissionId,
-      speed,
-      startIdx
-    );
-    setSnapshot(snap);
-    setPlayingLocal(autoPlay);
+    setLoading(true);
+    try {
+      const snap = await drishtiApi.startReplay(
+        selectedMissionId,
+        speed,
+        startIdx
+      );
+      setSnapshot(snap);
+      setPlayingLocal(autoPlay);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePause = async () => {
@@ -1737,18 +1483,55 @@ export const HistoricalMissionReplayScreen: React.FC<{
   };
 
   const syncHistory = snapshot?.synchronized_history || [];
-  const chartData = syncHistory.map((t) => ({
-    seq: t.sequence_number,
-    elapsed: t.mission_elapsed_sec,
-    cht_actual: t.actual.cht_c,
-    cht_expected: t.expected.cht_c,
-    oil_p_actual: t.actual.oil_pressure_bar,
-    oil_p_expected: t.expected.oil_pressure_bar,
-    vib_actual: t.actual.vibration_rms_mms,
-    hi: t.predicted.health_index,
-  }));
+  const chartData = useMemo(
+    () =>
+      syncHistory.map((t) => ({
+        seq: t.sequence_number,
+        elapsed: t.mission_elapsed_sec,
+        cht_actual: t.actual.cht_c,
+        cht_expected: t.expected.cht_c,
+        oil_p_actual: t.actual.oil_pressure_bar,
+        oil_p_expected: t.expected.oil_pressure_bar,
+        vib_actual: t.actual.vibration_rms_mms,
+        hi: t.predicted.health_index,
+      })),
+    [syncHistory]
+  );
 
   const cur = snapshot?.current_state || null;
+  const unifiedDiag = useMemo(() => extractUnifiedDiagnosis(cur), [cur]);
+
+  const scrubberMarkers: ScrubberMarker[] = useMemo(() => {
+    const alerts = snapshot?.all_mission_alerts || [];
+    return alerts.map((alt) => ({
+      position: alt.sequence_number,
+      severity: mapAlertSeverityToScrubber(alt.severity),
+      label: `Seq #${alt.sequence_number}: ${alt.fault_class} (${alt.severity})`,
+    }));
+  }, [snapshot]);
+
+  if (backendError && !snapshot && missions.length === 0) {
+    return (
+      <GlassPanel className="panel-card">
+        <EmptyState
+          icon={<ShieldAlert size={32} />}
+          title="Historical Mission Replay Offline"
+          description={backendError}
+          action={
+            onRefreshBackend ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={onRefreshBackend}
+              >
+                Retry Connection
+              </button>
+            ) : undefined
+          }
+        />
+      </GlassPanel>
+    );
+  }
 
   return (
     <div>
@@ -1758,7 +1541,7 @@ export const HistoricalMissionReplayScreen: React.FC<{
             Operations · Synchronized Mission Timeline Playback
           </div>
           <h1 className="screen-title">
-            Historical Mission Replay — 3D Twin, Telemetry & Alerts
+            Historical Mission Replay — 3D Twin, Telemetry &amp; Alerts
           </h1>
           <div className="screen-desc">
             Deterministic mission playback with play, pause, restart, timestamp
@@ -1766,6 +1549,7 @@ export const HistoricalMissionReplayScreen: React.FC<{
           </div>
         </div>
         <div className="screen-actions">
+          <SyntheticBadge isSynthetic={cur ? cur.is_synthetic : true} />
           <select
             className="select-control"
             value={selectedMissionId}
@@ -1779,146 +1563,180 @@ export const HistoricalMissionReplayScreen: React.FC<{
             ))}
           </select>
           <button
+            type="button"
             className="btn btn-primary"
             onClick={() => handleLoadAndStart(0, true)}
           >
-            <Play size={13} /> Load & Play Mission
+            <Play size={13} /> Load &amp; Play Mission
           </button>
         </div>
       </div>
 
       {/* Playback Transport Bar */}
-      <div className="panel-card">
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            flexWrap: 'wrap',
-            marginBottom: 8,
-          }}
-        >
-          {playingLocal ? (
-            <button className="btn btn-danger" onClick={handlePause}>
-              <Pause size={13} /> Pause
-            </button>
-          ) : (
-            <button
-              className="btn btn-primary"
-              onClick={() =>
-                handleLoadAndStart(snapshot?.current_index || 0, true)
-              }
+      <GlassPanel className="panel-card">
+        {loading && !snapshot ? (
+          <Skeleton variant="rect" width="100%" height={68} />
+        ) : (
+          <>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                flexWrap: 'wrap',
+                marginBottom: 10,
+              }}
             >
-              <Play size={13} /> Play
-            </button>
-          )}
-          <button
-            className="btn"
-            onClick={() => {
-              setPlayingLocal(false);
-              handleLoadAndStart(0, false);
-            }}
-          >
-            Restart (t=0s)
-          </button>
-          <button className="btn" onClick={handleStep}>
-            <StepForward size={13} /> Step +1 Frame
-          </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <FastForward size={13} />
-            <span className="mono" style={{ fontSize: 11 }}>
-              Speed:
-            </span>
-            {[0.5, 1.0, 2.0, 4.0].map((s) => (
+              {playingLocal ? (
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={handlePause}
+                >
+                  <Pause size={13} /> Pause
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() =>
+                    handleLoadAndStart(snapshot?.current_index || 0, true)
+                  }
+                >
+                  <Play size={13} /> Play
+                </button>
+              )}
               <button
-                key={s}
-                className={`btn btn-sm ${speed === s ? 'btn-primary' : ''}`}
-                onClick={() => setSpeed(s)}
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setPlayingLocal(false);
+                  handleLoadAndStart(0, false);
+                }}
               >
-                {s}x
+                Restart (t=0s)
               </button>
-            ))}
-          </div>
-          <div className="mono" style={{ marginLeft: 'auto', fontSize: 11.5 }}>
-            Position:{' '}
-            <strong>
-              Frame {(snapshot?.current_index ?? 0) + 1} /{' '}
-              {snapshot?.total_frames ?? 0}
-            </strong>{' '}
-            |{' '}
-            <strong>
-              t = {(snapshot?.current_elapsed_sec ?? 0).toFixed(1)}s
-            </strong>{' '}
-            | {snapshot?.current_timestamp || '—'}
-          </div>
-        </div>
+              <button type="button" className="btn" onClick={handleStep}>
+                <StepForward size={13} /> Step +1 Frame
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <FastForward size={13} />
+                <span className="mono" style={{ fontSize: 11 }}>
+                  Speed:
+                </span>
+                {[0.5, 1.0, 2.0, 4.0].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`btn btn-sm ${speed === s ? 'btn-primary' : ''}`}
+                    onClick={() => setSpeed(s)}
+                  >
+                    {s}x
+                  </button>
+                ))}
+              </div>
+              <div
+                className="mono"
+                style={{ marginLeft: 'auto', fontSize: 11.5 }}
+              >
+                Position:{' '}
+                <strong>
+                  Frame {(snapshot?.current_index ?? 0) + 1} /{' '}
+                  {snapshot?.total_frames ?? 0}
+                </strong>{' '}
+                |{' '}
+                <strong>
+                  t = {(snapshot?.current_elapsed_sec ?? 0).toFixed(1)}s
+                </strong>{' '}
+                | {snapshot?.current_timestamp || '—'}
+              </div>
+            </div>
 
-        <input
-          type="range"
-          aria-label="Replay Timeline Seek"
-          min={0}
-          max={Math.max(0, (snapshot?.total_frames || 1) - 1)}
-          value={snapshot?.current_index || 0}
-          onChange={(e) => handleSeekIndex(Number(e.target.value))}
-          style={{ width: '100%', accentColor: '#38bdf8' }}
-        />
-      </div>
+            <Scrubber
+              min={0}
+              max={Math.max(0, (snapshot?.total_frames || 1) - 1)}
+              value={snapshot?.current_index || 0}
+              onChange={(idx) => {
+                handleSeekIndex(idx);
+              }}
+              markers={scrubberMarkers}
+              formatValue={(val) =>
+                `Frame ${val + 1} / ${snapshot?.total_frames || 0}`
+              }
+              ariaLabel="Replay Timeline Seek"
+            />
+          </>
+        )}
+      </GlassPanel>
 
       {/* SYNCHRONIZED 3D ENGINE VIEWPORT AT REPLAY CURSOR */}
       <div style={{ marginBottom: 14 }}>
         <Engine3DViewport compact twinState={cur} />
       </div>
 
-      {cur && (
+      {cur ? (
         <div className="grid-4">
-          <div className="kpi-card info">
-            <div className="kpi-label">Replay Timestamp</div>
-            <div className="kpi-value sm" style={{ fontSize: 14 }}>
-              {cur.timestamp}
-            </div>
-            <div className="kpi-sub">
-              Seq #{cur.sequence_number} | Elapsed:{' '}
-              {cur.mission_elapsed_sec.toFixed(1)}s
-            </div>
-          </div>
-          <div className="kpi-card info">
-            <div className="kpi-label">Actual vs Expected CHT</div>
-            <div className="kpi-value sm">
-              {cur.actual.cht_c.toFixed(1)} °C / {cur.expected.cht_c.toFixed(1)}{' '}
-              °C
-            </div>
-            <div className="kpi-sub">
-              Residual: {cur.calculated.cht_residual_c >= 0 ? '+' : ''}
-              {cur.calculated.cht_residual_c.toFixed(2)} °C
-            </div>
-          </div>
-          <div className="kpi-card caution">
-            <div className="kpi-label">Predicted Fault at Cursor</div>
-            <div className="kpi-value sm" style={{ color: '#38bdf8' }}>
-              {cur.predicted.predicted_fault_class}
-            </div>
-            <div className="kpi-sub">
-              Confidence: {(cur.predicted.top_probability * 100).toFixed(1)}%
-            </div>
-          </div>
-          <div className="kpi-card nominal">
-            <div className="kpi-label">Health Index & RUL at Cursor</div>
-            <div className="kpi-value sm">
-              HI: {cur.predicted.health_index.toFixed(1)}%
-            </div>
-            <div className="kpi-sub">
-              RUL:{' '}
-              {cur.predicted.rul_status === 'ESTIMATED' &&
+          <KpiTile
+            label="Replay Timestamp"
+            value={cur.timestamp}
+            status="info"
+            subtext={`Seq #${cur.sequence_number} | Elapsed: ${cur.mission_elapsed_sec.toFixed(
+              1
+            )}s`}
+          />
+          <KpiTile
+            label="Actual vs Expected CHT"
+            value={`${cur.actual.cht_c.toFixed(1)} °C / ${cur.expected.cht_c.toFixed(
+              1
+            )} °C`}
+            status={
+              Math.abs(cur.calculated.cht_residual_c) >=
+              RESIDUAL_ALERT_THRESHOLDS.cht_c
+                ? 'caution'
+                : 'info'
+            }
+            subtext={`Residual: ${
+              cur.calculated.cht_residual_c >= 0 ? '+' : ''
+            }${cur.calculated.cht_residual_c.toFixed(2)} °C`}
+          />
+          <KpiTile
+            label="Predicted Fault at Cursor"
+            value={unifiedDiag.faultClass}
+            status={unifiedDiag.faultClass === 'Normal' ? 'nominal' : 'caution'}
+            subtext={`Confidence: ${unifiedDiag.confidencePct}% · ${unifiedDiag.certainty}`}
+          />
+          <KpiTile
+            label="Health Index & RUL at Cursor"
+            value={`HI: ${cur.predicted.health_index.toFixed(1)}%`}
+            status={
+              cur.predicted.health_index >= 75
+                ? 'nominal'
+                : cur.predicted.health_index >= 55
+                ? 'caution'
+                : 'critical'
+            }
+            subtext={`RUL: ${
+              cur.predicted.rul_status === 'ESTIMATED' &&
               cur.predicted.rul_hours !== null
                 ? `${cur.predicted.rul_hours.toFixed(1)} hrs`
-                : 'NOT ESTIMABLE'}
-            </div>
-          </div>
+                : 'NOT ESTIMABLE'
+            }`}
+          />
         </div>
+      ) : (
+        !loading && (
+          <GlassPanel className="panel-card" style={{ marginBottom: 14 }}>
+            <EmptyState
+              icon={<Play size={28} />}
+              title="No Replay Cursor State Active"
+              description="Select a mission above and click 'Load & Play Mission' to inspect synchronized 4-value telemetry frames."
+            />
+          </GlassPanel>
+        )
       )}
 
       <div className="grid-2">
-        <div className="panel-card">
+        <GlassPanel className="panel-card">
           <div className="panel-card-header">
             <div className="panel-card-title">
               Synchronized Replay Telemetry (t = 0s →{' '}
@@ -1928,9 +1746,19 @@ export const HistoricalMissionReplayScreen: React.FC<{
           <div style={{ height: 230 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a2440" />
-                <XAxis dataKey="elapsed" stroke="#8899bb" unit="s" />
-                <YAxis stroke="#8899bb" domain={['auto', 'auto']} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--border-subtle, #1a2440)"
+                />
+                <XAxis
+                  dataKey="elapsed"
+                  stroke="var(--text-muted, #8899bb)"
+                  unit="s"
+                />
+                <YAxis
+                  stroke="var(--text-muted, #8899bb)"
+                  domain={['auto', 'auto']}
+                />
                 <Tooltip />
                 <Legend />
                 <Line
@@ -1963,9 +1791,9 @@ export const HistoricalMissionReplayScreen: React.FC<{
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </GlassPanel>
 
-        <div className="panel-card">
+        <GlassPanel className="panel-card">
           <div className="panel-card-header">
             <div className="panel-card-title">
               <AlertTriangle size={14} /> Synchronized Alert Timeline up to Seq
@@ -1976,7 +1804,7 @@ export const HistoricalMissionReplayScreen: React.FC<{
           </div>
           <div style={{ maxHeight: 230, overflowY: 'auto' }}>
             {(snapshot?.synchronized_alerts || []).length === 0 ? (
-              <div style={{ color: '#94a3b8' }}>
+              <div style={{ color: 'var(--text-muted)' }}>
                 No alerts triggered up to current playback timestamp (t ={' '}
                 {(snapshot?.current_elapsed_sec ?? 0).toFixed(1)}s). Advance the
                 timeline past fault onset to observe alert triggers.
@@ -1988,29 +1816,30 @@ export const HistoricalMissionReplayScreen: React.FC<{
                 .map((alt) => (
                   <div
                     key={alt.alert_id}
-                    className={`alert-box ${alt.severity.toLowerCase()}`}
+                    className={getAlertBoxSeverityClass(alt.severity)}
                   >
                     <div
                       style={{
                         display: 'flex',
                         justifyContent: 'space-between',
+                        alignItems: 'center',
                       }}
                     >
                       <strong>
                         Seq #{alt.sequence_number} — {alt.fault_class}
                       </strong>
-                      <span className={statusBadgeClass(alt.severity)}>
-                        {alt.severity}
-                      </span>
+                      <SeverityBadge severity={alt.severity} />
                     </div>
-                    <div style={{ fontSize: 11.5, color: '#cbd5e1' }}>
+                    <div
+                      style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}
+                    >
                       {alt.supporting_evidence[0]}
                     </div>
                   </div>
                 ))
             )}
           </div>
-        </div>
+        </GlassPanel>
       </div>
     </div>
   );

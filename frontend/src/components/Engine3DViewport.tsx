@@ -13,7 +13,10 @@ import {
   Play,
   RotateCcw,
 } from 'lucide-react';
-import { FourValueDigitalTwinState } from '../types/telemetry';
+import {
+  FourValueDigitalTwinState,
+  RESIDUAL_ALERT_THRESHOLDS,
+} from '../types/telemetry';
 
 export type EngineSubsystemId =
   | 'crankcase_assembly'
@@ -231,7 +234,10 @@ export function evaluateSubsystemStates(
   }
 
   // 2. Cylinder Overheating / Thermal Excursion
-  if (fc === 'Cylinder Overheating' || calculated.cht_residual_c > 15.0) {
+  if (
+    fc === 'Cylinder Overheating' ||
+    calculated.cht_residual_c >= RESIDUAL_ALERT_THRESHOLDS.cht_c
+  ) {
     const msg = `CHT residual ${
       calculated.cht_residual_c >= 0 ? '+' : ''
     }${calculated.cht_residual_c.toFixed(1)} °C (Actual ${actual.cht_c.toFixed(
@@ -249,7 +255,8 @@ export function evaluateSubsystemStates(
   // 3. Oil Pressure Drop
   if (
     fc === 'Oil Pressure Drop' ||
-    calculated.oil_pressure_residual_bar < -0.65
+    calculated.oil_pressure_residual_bar <=
+      RESIDUAL_ALERT_THRESHOLDS.oil_pressure_bar
   ) {
     const msg = `Oil pressure residual ${calculated.oil_pressure_residual_bar.toFixed(
       2
@@ -264,7 +271,7 @@ export function evaluateSubsystemStates(
   // 4. Crankshaft Bearing Wear
   if (
     fc === 'Crankshaft Bearing Wear' ||
-    calculated.vibration_residual_mms > 2.2
+    calculated.vibration_residual_mms >= RESIDUAL_ALERT_THRESHOLDS.vibration_mms
   ) {
     const msg = `Vibration residual +${calculated.vibration_residual_mms.toFixed(
       2
@@ -280,7 +287,10 @@ export function evaluateSubsystemStates(
   }
 
   // 5. Cylinder Misfire
-  if (fc === 'Cylinder Misfire' || calculated.egt_residual_c < -40.0) {
+  if (
+    fc === 'Cylinder Misfire' ||
+    calculated.egt_residual_c <= -RESIDUAL_ALERT_THRESHOLDS.egt_c
+  ) {
     const msg = `Combustion misfire: EGT residual ${calculated.egt_residual_c.toFixed(
       1
     )} °C, Vib +${calculated.vibration_residual_mms.toFixed(2)} mm/s`;
@@ -315,7 +325,8 @@ export function evaluateSubsystemStates(
   // 8. Fuel Injector Clogging
   if (
     fc === 'Fuel Injector Clogging' ||
-    calculated.fuel_flow_residual_lph < -2.2
+    Math.abs(calculated.fuel_flow_residual_lph) >=
+      RESIDUAL_ALERT_THRESHOLDS.fuel_flow_lph
   ) {
     const msg = `Nozzle restriction: Fuel residual ${calculated.fuel_flow_residual_lph.toFixed(
       2
@@ -1453,7 +1464,7 @@ export const Engine3DViewport: React.FC<{
             <div className="kpi-label" style={{ marginTop: 4 }}>
               Synchronized 4-Value Telemetry Comparison
               <span style={{ fontSize: 9.5, color: '#94a3b8', fontWeight: 400, marginLeft: 6 }}>
-                (ΔRes colors: UI display bands [indicative])
+                (ΔRes colors: alert_engine.py thresholds)
               </span>
             </div>
             <table className="eng-table mono" style={{ fontSize: 11 }}>
@@ -1473,7 +1484,8 @@ export const Engine3DViewport: React.FC<{
                   <td
                     style={{
                       color:
-                        Math.abs(twinState.calculated.cht_residual_c) > 12
+                        Math.abs(twinState.calculated.cht_residual_c) >=
+                        RESIDUAL_ALERT_THRESHOLDS.cht_c
                           ? '#f59e0b'
                           : '#cbd5e1',
                     }}
@@ -1486,7 +1498,15 @@ export const Engine3DViewport: React.FC<{
                   <td>EGT (°C)</td>
                   <td>{twinState.actual.egt_c.toFixed(0)}</td>
                   <td>{twinState.expected.egt_c.toFixed(0)}</td>
-                  <td>
+                  <td
+                    style={{
+                      color:
+                        Math.abs(twinState.calculated.egt_residual_c) >=
+                        RESIDUAL_ALERT_THRESHOLDS.egt_c
+                          ? '#f59e0b'
+                          : '#cbd5e1',
+                    }}
+                  >
                     {twinState.calculated.egt_residual_c >= 0 ? '+' : ''}
                     {twinState.calculated.egt_residual_c.toFixed(0)}
                   </td>
@@ -1498,7 +1518,8 @@ export const Engine3DViewport: React.FC<{
                   <td
                     style={{
                       color:
-                        twinState.calculated.oil_pressure_residual_bar < -0.5
+                        twinState.calculated.oil_pressure_residual_bar <=
+                        RESIDUAL_ALERT_THRESHOLDS.oil_pressure_bar
                           ? '#ef4444'
                           : '#cbd5e1',
                     }}
@@ -1513,7 +1534,15 @@ export const Engine3DViewport: React.FC<{
                   <td>Oil T (°C)</td>
                   <td>{twinState.actual.oil_temp_c.toFixed(1)}</td>
                   <td>{twinState.expected.oil_temp_c.toFixed(1)}</td>
-                  <td>
+                  <td
+                    style={{
+                      color:
+                        Math.abs(twinState.calculated.oil_temp_residual_c) >=
+                        RESIDUAL_ALERT_THRESHOLDS.oil_temp_c
+                          ? '#f59e0b'
+                          : '#cbd5e1',
+                    }}
+                  >
                     {twinState.calculated.oil_temp_residual_c >= 0 ? '+' : ''}
                     {twinState.calculated.oil_temp_residual_c.toFixed(1)}
                   </td>
@@ -1525,7 +1554,8 @@ export const Engine3DViewport: React.FC<{
                   <td
                     style={{
                       color:
-                        twinState.calculated.vibration_residual_mms > 1.2
+                        twinState.calculated.vibration_residual_mms >=
+                        RESIDUAL_ALERT_THRESHOLDS.vibration_mms
                           ? '#f59e0b'
                           : '#cbd5e1',
                     }}
@@ -1540,7 +1570,15 @@ export const Engine3DViewport: React.FC<{
                   <td>Fuel (L/h)</td>
                   <td>{twinState.actual.fuel_flow_lph.toFixed(1)}</td>
                   <td>{twinState.expected.fuel_flow_lph.toFixed(1)}</td>
-                  <td>
+                  <td
+                    style={{
+                      color:
+                        Math.abs(twinState.calculated.fuel_flow_residual_lph) >=
+                        RESIDUAL_ALERT_THRESHOLDS.fuel_flow_lph
+                          ? '#f59e0b'
+                          : '#cbd5e1',
+                    }}
+                  >
                     {twinState.calculated.fuel_flow_residual_lph >= 0
                       ? '+'
                       : ''}

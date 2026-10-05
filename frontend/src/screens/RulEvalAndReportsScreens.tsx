@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Area,
-  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -15,549 +13,234 @@ import {
 } from 'recharts';
 import {
   Activity,
+  AlertTriangle,
   Award,
   CheckCircle2,
   Database,
   Download,
   FileText,
-  Gauge,
-  Info,
   RefreshCw,
   Settings,
   ShieldAlert,
-  ShieldCheck,
 } from 'lucide-react';
 import { drishtiApi } from '../api/client';
+import {
+  EmptyState,
+  GlassPanel,
+  KpiTile,
+  Skeleton,
+  StatusChip,
+  SyntheticBadge,
+} from '../components/ui';
+
+export { PredictiveMaintenanceRulScreen } from './rul/PredictiveMaintenanceRulScreen';
 
 /* =========================================================================
-   SCREEN 7: PREDICTIVE MAINTENANCE & REMAINING USEFUL LIFE (RUL)
+   STRONG TYPES FOR EVALUATION, REPORTS & DOCS SCREENS
    ========================================================================= */
-export const PredictiveMaintenanceRulScreen: React.FC<{
-  engineId: string;
-}> = ({ engineId }) => {
-  const [healthData, setHealthData] = useState<Record<string, any> | null>(
-    null
-  );
-  const [loading, setLoading] = useState(false);
-  const [alphaW, setAlphaW] = useState<number>(0.3);
-  const [betaW, setBetaW] = useState<number>(0.3);
-  const [gammaW, setGammaW] = useState<number>(0.2);
-  const [deltaW, setDeltaW] = useState<number>(0.2);
-  const [goMinHi, setGoMinHi] = useState<number>(75.0);
-  const [precMinHi, setPrecMinHi] = useState<number>(55.0);
-  const [policyStatus, setPolicyStatus] = useState<string | null>(null);
+interface PerClassMetric {
+  precision: number;
+  recall: number;
+  f1: number;
+  support: number;
+}
 
-  const loadHealth = async () => {
-    setLoading(true);
-    try {
-      const d = await drishtiApi.getEngineHealth(engineId);
-      setHealthData(d);
-      const w = d.health_policy?.weights || d.health_weights?.weights;
-      if (w) {
-        setAlphaW(w.thermal_penalty_weight ?? 0.3);
-        setBetaW(w.oil_penalty_weight ?? 0.3);
-        setGammaW(w.vibration_penalty_weight ?? 0.2);
-        setDeltaW(w.anomaly_penalty_weight ?? 0.2);
-      }
-      const rt = d.health_policy?.readiness_thresholds;
-      if (rt) {
-        setGoMinHi(rt.go_min_health_index ?? 75.0);
-        setPrecMinHi(rt.precaution_min_health_index ?? 55.0);
-      }
-    } finally {
-      setLoading(false);
-    }
+interface ClassificationMetrics {
+  overall_accuracy: number;
+  macro_f1: number;
+  classes: string[];
+  per_class: Record<string, PerClassMetric>;
+  confusion_matrix: number[][];
+}
+
+interface AnomalyDetectionMetrics {
+  model_type: string;
+  calibrated_threshold: number;
+  recall: number;
+  false_alarm_rate: number;
+  precision: number;
+  pr_curve: Array<{ recall: number; precision: number }>;
+}
+
+interface SensorFaultIsolationMetrics {
+  isolator_version: string;
+  precision: number;
+  recall: number;
+  f1: number;
+  true_positives: number;
+  false_positives: number;
+  false_negatives: number;
+}
+
+interface RulEstimationMetrics {
+  model_type: string;
+  target_unit: string;
+  secondary_unit: string;
+  held_out_mae_hours: number;
+  held_out_rmse_hours: number;
+  xgboost_held_out_mae_hours?: number;
+  xgboost_held_out_rmse_hours?: number;
+  evaluated_samples: number;
+}
+
+interface DatasetManifest {
+  dataset_id: string;
+  is_synthetic: boolean;
+  total_trajectories: number;
+  train_trajectories: number;
+  test_trajectories: number;
+  total_samples: number;
+  train_samples: number;
+  test_samples: number;
+  shared_engines_between_train_and_test: number;
+  provenance_statement?: string;
+}
+
+interface Ppt100kSplitDetail {
+  engine_count: number;
+  row_count: number;
+}
+
+interface Ppt100kEvaluation {
+  report_id?: string;
+  dataset_manifest?: {
+    dataset_version: string;
+    is_synthetic: boolean;
+    provenance_disclosure?: string;
+    base_seed: number;
+    total_rows: number;
+    total_distinct_engines: number;
+    total_trajectories: number;
+    splits?: {
+      train?: Ppt100kSplitDetail;
+      validation?: Ppt100kSplitDetail;
+      test?: Ppt100kSplitDetail;
+    };
   };
-
-  useEffect(() => {
-    loadHealth();
-  }, [engineId]);
-
-  const handleSavePolicy = async (resetDefault = false) => {
-    const payload = resetDefault
-      ? {
-          weights: {
-            thermal_penalty_weight: 0.3,
-            oil_penalty_weight: 0.3,
-            vibration_penalty_weight: 0.2,
-            anomaly_penalty_weight: 0.2,
-          },
-          readiness_thresholds: {
-            go_min_health_index: 75.0,
-            precaution_min_health_index: 55.0,
-            go_min_rul_hours: 15.0,
-            precaution_min_rul_hours: 5.0,
-          },
-        }
-      : {
-          weights: {
-            thermal_penalty_weight: alphaW,
-            oil_penalty_weight: betaW,
-            vibration_penalty_weight: gammaW,
-            anomaly_penalty_weight: deltaW,
-          },
-          readiness_thresholds: {
-            go_min_health_index: goMinHi,
-            precaution_min_health_index: precMinHi,
-          },
-        };
-    try {
-      const res = await drishtiApi.updateHealthPolicy(payload);
-      const nw = res.health_policy.weights;
-      setAlphaW(nw.thermal_penalty_weight);
-      setBetaW(nw.oil_penalty_weight);
-      setGammaW(nw.vibration_penalty_weight);
-      setDeltaW(nw.anomaly_penalty_weight);
-      setPolicyStatus(
-        `Policy updated & persisted to SQLite: α=${nw.thermal_penalty_weight}, β=${nw.oil_penalty_weight}, γ=${nw.vibration_penalty_weight}, δ=${nw.anomaly_penalty_weight} (GO ≥ ${res.health_policy.readiness_thresholds.go_min_health_index}% HI)`
-      );
-      await loadHealth();
-    } catch (err: any) {
-      setPolicyStatus(`Failed updating policy: ${err.message}`);
-    }
+  validation_metrics?: {
+    anomaly_detection?: {
+      false_alarm_rate: number;
+    };
   };
+  held_out_test_metrics?: {
+    classification: {
+      macro_f1: number;
+      overall_accuracy: number;
+    };
+    anomaly_detection: {
+      recall: number;
+      false_alarm_rate: number;
+    };
+    rul_xgboost: {
+      held_out_mae_cycles: number;
+      held_out_rmse_cycles: number;
+      held_out_mae_hours: number;
+    };
+    sensor_fault_isolation: {
+      f1: number;
+    };
+  };
+}
 
-  if (loading || !healthData) {
-    return (
-      <div className="panel-card" style={{ padding: '36px 20px', textAlign: 'center' }}>
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 10,
-            color: '#38bdf8',
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          <RefreshCw size={18} className="spin-slow" />
-          <span>Loading degradation trajectory and RUL estimates for {engineId}…</span>
-        </div>
-        <div style={{ color: '#94a3b8', fontSize: 11, marginTop: 8 }}>
-          Aggregating health index history, physics degradation models, and remaining flight hours.
-        </div>
-      </div>
-    );
-  }
+interface EvaluationReportData {
+  model_version: string;
+  classifier_held_out_macro_f1: number;
+  xgboost_status?: string;
+  xgboost_fallback_note?: string;
+  data_provenance_warning: string;
+  feature_names: string[];
+  feature_importances: Record<string, number>;
+  dataset_manifest: DatasetManifest;
+  classification_metrics: ClassificationMetrics;
+  anomaly_detection_metrics: AnomalyDetectionMetrics;
+  sensor_fault_isolation_metrics: SensorFaultIsolationMetrics;
+  rul_estimation_metrics: RulEstimationMetrics;
+  ppt_100k_evaluation?: Ppt100kEvaluation | null;
+}
 
-  const pred = healthData.latest_predicted;
-  const traj = healthData.degradation_trajectory || [];
-  const weights = healthData.health_weights?.weights || {};
+interface DataQualityStats {
+  total_received: number;
+  total_valid: number;
+  total_rejected_or_degraded: number;
+  degraded_or_rejection_rate: number;
+  duplicate_count: number;
+  out_of_order_count: number;
+  stale_count: number;
+}
 
-  // Compute live advisory under configured weights/thresholds
-  const b = pred?.health_breakdown || {};
-  const liveRecomputedHi = pred
-    ? Math.max(
-        0,
-        Math.min(
-          100,
-          alphaW * (b.thermal_health_subscore ?? 100) +
-            betaW * (b.oil_system_subscore ?? 100) +
-            gammaW * (b.vibration_mechanical_subscore ?? 100) +
-            deltaW * (b.anomaly_subscore ?? 100)
-        )
-      )
-    : 100.0;
-  const liveAdvisory =
-    liveRecomputedHi >= goMinHi && pred?.predicted_fault_class === 'Normal'
-      ? 'GO (PROTOTYPE ADVISORY)'
-      : liveRecomputedHi >= precMinHi
-      ? 'GO WITH PRECAUTION (PROTOTYPE ADVISORY)'
-      : 'NO-GO / HOLD FOR MAINTENANCE (PROTOTYPE ADVISORY)';
+interface EngineeringReportItem {
+  report_id: string;
+  title: string;
+  engine_id: string;
+  mission_id: string;
+  simulation_id?: string;
+  created_at?: string;
+  is_synthetic?: boolean;
+  data_source?: string;
+  physics_model_version?: string;
+  ml_model_version?: string;
+  scenario_configuration?: {
+    scenario_id?: string;
+    mission_profile?: string;
+    fault_class?: string;
+    severity?: number;
+    onset_time_sec?: number;
+    duration_sec?: number;
+    random_seed?: number;
+  };
+  measured_results?: {
+    total_frames?: number;
+    alert_count?: number;
+    initial_health_index?: number;
+    final_health_index?: number;
+    final_predicted_class?: string;
+    final_top_probability?: number;
+    final_rul_status?: string;
+    final_rul_hours?: number | null;
+    peak_abs_cht_residual_c?: number;
+    min_oil_pressure_residual_bar?: number;
+  };
+  engineering_disclosures?: string[];
+}
 
-  return (
-    <div>
-      <div className="screen-header">
-        <div className="screen-title-block">
-          <div className="screen-eyebrow">
-            Diagnostics · Remaining Useful Life & Health Indicator Policy
-          </div>
-          <h1 className="screen-title">
-            Predictive Maintenance & RUL — {engineId}
-          </h1>
-          <div className="screen-desc">
-            Predicted Remaining Useful Life (RUL) with explicit units, model/data
-            provenance, 10th–90th percentile uncertainty bounds, historical
-            degradation trends, and known engineering limitations.
-          </div>
-        </div>
-        <div className="screen-actions">
-          <span className="badge badge-synthetic">
-            SYNTHETIC RUL MODEL PROVENANCE
-          </span>
-          <button className="btn" onClick={loadHealth}>
-            <RefreshCw size={13} /> Refresh Health State
-          </button>
-        </div>
-      </div>
+interface EnvelopeRange {
+  min: number;
+  nominal: number;
+  max: number;
+  unit: string;
+}
 
-      {pred && (
-        <div className="grid-4">
-          {/* 1. Predicted RUL & Unit */}
-          <div className="kpi-card info">
-            <div className="kpi-label">Predicted Remaining Useful Life (RUL)</div>
-            <div className="kpi-value sm" style={{ color: '#38bdf8' }}>
-              {pred.rul_status === 'ESTIMATED' && pred.rul_hours !== null
-                ? pred.rul_cycles != null
-                  ? `${pred.rul_hours.toFixed(1)} hours (${pred.rul_cycles.toFixed(
-                      1
-                    )} cycles)`
-                  : `${pred.rul_hours.toFixed(1)} hours`
-                : 'NOT ESTIMABLE'}
-            </div>
-            <div className="kpi-sub">
-              Unit: Operating Hours ({pred.rul_unit || 'hours'}) & Mission Cycles
-            </div>
-          </div>
+interface PhysicsMetadata {
+  model_version: string;
+  supported_operating_envelope?: Record<string, EnvelopeRange>;
+  assumptions?: string[];
+}
 
-          {/* 2. Uncertainty / Confidence Bounds */}
-          <div className="kpi-card nominal">
-            <div className="kpi-label">Ensemble Uncertainty Bounds (10th–90th)</div>
-            <div className="kpi-value sm" style={{ color: '#4ade80' }}>
-              {pred.rul_status === 'ESTIMATED' &&
-              pred.rul_lower_10_hours !== null &&
-              pred.rul_upper_90_hours !== null
-                ? `[${pred.rul_lower_10_hours.toFixed(1)} – ${pred.rul_upper_90_hours.toFixed(
-                    1
-                  )}] hrs`
-                : 'Gated / Unavailable'}
-            </div>
-            <div className="kpi-sub">{pred.rul_reason}</div>
-          </div>
+interface CanInterfaceMetadata {
+  adapter_class: string;
+  mode: string;
+  hardware_connected: boolean;
+  disclosure?: string;
+}
 
-          {/* 3. Composite Health Indicator */}
-          <div
-            className={`kpi-card ${
-              liveRecomputedHi >= goMinHi
-                ? 'nominal'
-                : liveRecomputedHi >= precMinHi
-                ? 'caution'
-                : 'critical'
-            }`}
-          >
-            <div className="kpi-label">Composite Health Indicator (HI)</div>
-            <div
-              className="kpi-value sm"
-              style={{
-                color:
-                  liveRecomputedHi >= goMinHi
-                    ? '#4ade80'
-                    : liveRecomputedHi >= precMinHi
-                    ? '#fbbf24'
-                    : '#f87171',
-              }}
-            >
-              {liveRecomputedHi.toFixed(1)} / 100
-            </div>
-            <div className="kpi-sub">
-              Decision: <strong>{liveAdvisory}</strong>
-            </div>
-          </div>
-
-          {/* 4. Model & Data Provenance */}
-          <div className="kpi-card info">
-            <div className="kpi-label">RUL Model & Data Provenance</div>
-            <div
-              className="mono"
-              style={{ fontSize: 12, fontWeight: 700, color: '#ffffff' }}
-            >
-              {pred.model_version || 'DRISHTI-ML-Ensemble-v1.0'}
-            </div>
-            <div className="kpi-sub">
-              Trained on synthetic run-to-failure trajectories (Seed 1000 / 2026).
-              Advisory only.
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SUBSYSTEM HEALTH BREAKDOWN */}
-      {pred?.health_breakdown && (
-        <div className="grid-4">
-          {Object.entries(pred.health_breakdown).map(([k, v]) => (
-            <div key={k} className="panel-card" style={{ marginBottom: 0 }}>
-              <div className="kpi-label">{k.replace(/_/g, ' ')}</div>
-              <div className="kpi-value sm">{Number(v).toFixed(1)}%</div>
-              <div className="progress-bar-track" style={{ marginTop: 6 }}>
-                <div
-                  className="progress-bar-fill"
-                  style={{
-                    width: `${Math.min(100, Math.max(0, Number(v)))}%`,
-                    backgroundColor:
-                      Number(v) >= 75
-                        ? '#22c55e'
-                        : Number(v) >= 55
-                        ? '#f59e0b'
-                        : '#ef4444',
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* HISTORICAL DEGRADATION & RUL UNCERTAINTY TRAJECTORY CHARTS */}
-      <div className="grid-2" style={{ marginTop: 14 }}>
-        <div className="panel-card">
-          <div className="panel-card-header">
-            <div className="panel-card-title">
-              <Gauge size={14} /> Historical Health Index & Subsystem Safety
-              Margins (%)
-            </div>
-          </div>
-          <div style={{ height: 250 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={traj}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a2440" />
-                <XAxis dataKey="mission_elapsed_sec" stroke="#8899bb" unit="s" />
-                <YAxis stroke="#8899bb" domain={[0, 105]} unit="%" />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="health_index"
-                  name="Composite Health Index (%)"
-                  stroke="#38bdf8"
-                  strokeWidth={2.5}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="thermal_margin_pct"
-                  name="Thermal Margin (%)"
-                  stroke="#fb923c"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="oil_pressure_margin_pct"
-                  name="Oil Pressure Margin (%)"
-                  stroke="#22c55e"
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="vibration_margin_pct"
-                  name="Vibration Margin (%)"
-                  stroke="#a78bfa"
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="panel-card">
-          <div className="panel-card-header">
-            <div className="panel-card-title">
-              RUL Historical Trajectory & Ensemble 10th–90th Percentile Bounds
-              (Hours)
-            </div>
-          </div>
-          <div style={{ height: 250 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={traj}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a2440" />
-                <XAxis dataKey="mission_elapsed_sec" stroke="#8899bb" unit="s" />
-                <YAxis stroke="#8899bb" unit="h" />
-                <Tooltip />
-                <Legend />
-                <Area
-                  type="monotone"
-                  dataKey="rul_upper_90_hours"
-                  name="90th Percentile RUL (hrs)"
-                  stroke="#64748b"
-                  fill="rgba(56, 189, 248, 0.12)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="rul_hours"
-                  name="Estimated Mean RUL (hrs)"
-                  stroke="#38bdf8"
-                  fill="rgba(56, 189, 248, 0.25)"
-                  strokeWidth={2}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="rul_lower_10_hours"
-                  name="10th Percentile RUL (hrs)"
-                  stroke="#f59e0b"
-                  fill="rgba(15, 23, 42, 0.4)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* CONFIGURABLE HEALTH INDEX WEIGHTS & GO / NO-GO POLICY PANEL */}
-      <div className="panel-card">
-        <div className="panel-card-header">
-          <div className="panel-card-title">
-            <Settings size={14} /> Configurable Health Index Weights (α, β, γ, δ)
-            & GO / GO WITH PRECAUTION / NO-GO Thresholds
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn" onClick={() => handleSavePolicy(true)}>
-              Reset SIH26054 Defaults (0.30 / 0.30 / 0.20 / 0.20)
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={() => handleSavePolicy(false)}
-            >
-              Apply Custom Weights & Thresholds
-            </button>
-          </div>
-        </div>
-        <div className="form-grid">
-          <div className="form-field">
-            <label htmlFor="w-alpha">
-              α Thermal Weight (Current: {weights.thermal_penalty_weight ?? 0.3})
-            </label>
-            <input
-              id="w-alpha"
-              type="number"
-              step="0.05"
-              min="0"
-              max="1"
-              className="input-control mono"
-              value={alphaW}
-              onChange={(e) => setAlphaW(Number(e.target.value))}
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="w-beta">
-              β Oil Lubrication Weight (Current:{' '}
-              {weights.oil_penalty_weight ?? 0.3})
-            </label>
-            <input
-              id="w-beta"
-              type="number"
-              step="0.05"
-              min="0"
-              max="1"
-              className="input-control mono"
-              value={betaW}
-              onChange={(e) => setBetaW(Number(e.target.value))}
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="w-gamma">
-              γ Vibration Weight (Current:{' '}
-              {weights.vibration_penalty_weight ?? 0.2})
-            </label>
-            <input
-              id="w-gamma"
-              type="number"
-              step="0.05"
-              min="0"
-              max="1"
-              className="input-control mono"
-              value={gammaW}
-              onChange={(e) => setGammaW(Number(e.target.value))}
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="w-delta">
-              δ Anomaly / ML Weight (Current:{' '}
-              {weights.anomaly_penalty_weight ?? 0.2})
-            </label>
-            <input
-              id="w-delta"
-              type="number"
-              step="0.05"
-              min="0"
-              max="1"
-              className="input-control mono"
-              value={deltaW}
-              onChange={(e) => setDeltaW(Number(e.target.value))}
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="thr-go">GO Minimum HI (%)</label>
-            <input
-              id="thr-go"
-              type="number"
-              step="1"
-              min="50"
-              max="95"
-              className="input-control mono"
-              value={goMinHi}
-              onChange={(e) => setGoMinHi(Number(e.target.value))}
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="thr-prec">GO WITH PRECAUTION Min HI (%)</label>
-            <input
-              id="thr-prec"
-              type="number"
-              step="1"
-              min="30"
-              max="85"
-              className="input-control mono"
-              value={precMinHi}
-              onChange={(e) => setPrecMinHi(Number(e.target.value))}
-            />
-          </div>
-        </div>
-        {policyStatus && (
-          <div
-            className="mono"
-            style={{ marginTop: 8, color: '#38bdf8', fontSize: 11.5 }}
-          >
-            {policyStatus}
-          </div>
-        )}
-      </div>
-
-      {/* KNOWN RUL LIMITATIONS & PROVENANCE DISCLOSURE */}
-      <div className="panel-card">
-        <div className="panel-card-header">
-          <div className="panel-card-title">
-            <Info size={14} /> RUL Provenance, Gating Policy & Known Engineering
-            Limitations
-          </div>
-        </div>
-        <div
-          className="mono"
-          style={{ fontSize: 11.5, color: '#94a3b8', lineHeight: 1.7 }}
-        >
-          <div>
-            • <strong>Model & Data Provenance:</strong> RUL estimates are
-            generated by the hybrid <code>XGBRegressor</code> +{' '}
-            <code>RandomForestRegressor</code> ensemble trained on synthetic
-            degradation trajectories (<code>DRISHTI-SynthCorpus-v1.0</code> 54
-            trajectories & <code>DRISHTI-SynthCorpus-100k-v2.0</code> 50
-            engines).
-          </div>
-          <div>
-            • <strong>Safety Gating Rule:</strong> When the dedicated{' '}
-            <code>SensorFaultIsolator</code> detects an instrumentation fault or
-            corrupted channel, RUL estimation is automatically gated to{' '}
-            <code>NOT_ESTIMABLE</code> so sensor drift is never misinterpreted
-            as mechanical life exhaustion.
-          </div>
-          <div>
-            • <strong>Known Limitations:</strong> Synthetic RUL accuracy (2.805 h
-            MAE on 54-traj suite; 8.782 cycles / 7.571 h MAE on 100k suite)
-            demonstrates algorithmic consistency on simulated progression curves
-            and must not be presented as certified real-UAV engine run-to-failure
-            accuracy without destructive endurance test-cell calibration.
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+interface ParameterGroupSpecItem {
+  group_id: number;
+  group_name: string;
+  channels?: string[];
+  unit: string;
+  nominal_range: string | number[];
+  warning_limits: string | number[];
+  critical_limits: string | number[];
+}
 
 /* =========================================================================
-   SCREEN 8: MODEL EVALUATION (SYNTHETIC VS EXTERNAL BENCHMARK SEPARATION)
+   SCREEN 8: MODEL EVALUATION (SYNTHETIC HELD-OUT EVALUATION)
    ========================================================================= */
 export const ModelEvaluationScreen: React.FC<{
-  modelStatus: Record<string, any> | null;
+  modelStatus: Record<string, unknown> | null;
+  backendError?: string | null;
   onRefreshModelStatus: () => Promise<void>;
-}> = ({ modelStatus, onRefreshModelStatus }) => {
+}> = ({ modelStatus, backendError = null, onRefreshModelStatus }) => {
   const [retraining, setRetraining] = useState(false);
 
   const handleRetrain = async () => {
@@ -570,27 +253,47 @@ export const ModelEvaluationScreen: React.FC<{
     }
   };
 
-  const report = modelStatus?.evaluation_report;
+  const report = (modelStatus?.evaluation_report ||
+    null) as EvaluationReportData | null;
+
+  if (backendError && !report) {
+    return (
+      <GlassPanel className="panel-card">
+        <EmptyState
+          icon={<ShieldAlert size={32} />}
+          title="ML Evaluation Telemetry Offline"
+          description={backendError}
+          action={
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={onRefreshModelStatus}
+            >
+              Retry Connection
+            </button>
+          }
+        />
+      </GlassPanel>
+    );
+  }
+
   if (!report) {
     return (
-      <div className="panel-card" style={{ padding: '36px 20px', textAlign: 'center' }}>
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 10,
-            color: '#38bdf8',
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          <RefreshCw size={18} className="spin-slow" />
-          <span>Synchronizing ML evaluation metrics & benchmark dataset manifest…</span>
-        </div>
-        <div style={{ color: '#94a3b8', fontSize: 11, marginTop: 8 }}>
-          Connecting to DRISHTI inference server. If the backend is spinning up on Render, this may take a few moments.
-        </div>
-      </div>
+      <GlassPanel className="panel-card" style={{ padding: '24px' }}>
+        <Skeleton variant="text" width="45%" height={24} />
+        <Skeleton
+          variant="rect"
+          width="100%"
+          height={96}
+          style={{ marginTop: 12 }}
+        />
+        <Skeleton
+          variant="rect"
+          width="100%"
+          height={240}
+          style={{ marginTop: 12 }}
+        />
+      </GlassPanel>
     );
   }
 
@@ -613,19 +316,25 @@ export const ModelEvaluationScreen: React.FC<{
       <div className="screen-header">
         <div className="screen-title-block">
           <div className="screen-eyebrow">
-            Validation · Leak-Free Held-Out Evaluation & External Benchmarks
+            Validation · Leak-Free Synthetic Held-Out Evaluation
           </div>
           <h1 className="screen-title">
-            Machine Learning Evaluation & Benchmark Audit
+            Machine Learning Evaluation &amp; Synthetic Benchmark Audit
           </h1>
           <div className="screen-desc">
-            Strict separation between Synthetic Digital Twin Benchmarks (
-            {manifest.shared_engines_between_train_and_test} shared engines) and
-            External Experimental Engine Datasets (LiU-ICE & Marine Diesel).
+            Engine-disjoint held-out evaluation on{' '}
+            {manifest.dataset_id || 'DRISHTI-SynthCorpus-v1.0'} (
+            {manifest.shared_engines_between_train_and_test} shared engines
+            between train and test splits).
           </div>
         </div>
         <div className="screen-actions">
+          <SyntheticBadge
+            isSynthetic={true}
+            label="SYNTHETIC HELD-OUT EVALUATION"
+          />
           <button
+            type="button"
             className="btn btn-primary"
             onClick={handleRetrain}
             disabled={retraining}
@@ -638,249 +347,189 @@ export const ModelEvaluationScreen: React.FC<{
         </div>
       </div>
 
-      {/* SECTION A: SYNTHETIC BENCHMARK RESULTS */}
-      <div className="panel-card" style={{ borderLeft: '3px solid #38bdf8' }}>
+      {/* BACKEND DATA PROVENANCE WARNING BANNER */}
+      {report.data_provenance_warning && (
+        <GlassPanel
+          className="panel-card"
+          glow="caution"
+          style={{ marginBottom: 14 }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+              fontSize: 12,
+              lineHeight: 1.55,
+              color: 'var(--text-primary)',
+            }}
+          >
+            <AlertTriangle
+              size={18}
+              style={{
+                color: 'var(--color-caution)',
+                flexShrink: 0,
+                marginTop: 2,
+              }}
+            />
+            <div>
+              <strong style={{ color: 'var(--color-caution)' }}>
+                Data Provenance Warning (/api/model-status):{' '}
+              </strong>
+              {report.data_provenance_warning}
+            </div>
+          </div>
+        </GlassPanel>
+      )}
+
+      {/* SECTION A: SYNTHETIC HELD-OUT BENCHMARK RESULTS */}
+      <GlassPanel className="panel-card" glow="cyan">
         <div className="panel-card-header">
           <div className="panel-card-title">
-            <Database size={14} /> Part A — Synthetic Digital Twin Benchmark
-            Results (Simulated Telemetry — Not Proof of Real UAV Accuracy)
+            <Database size={14} /> Synthetic Digital Twin Held-Out Benchmark
+            Results ({manifest.dataset_id})
           </div>
-          <span className="badge badge-synthetic">
-            100% SYNTHETIC BENCHMARKS (0 SHARED ENGINES)
-          </span>
+          <SyntheticBadge
+            isSynthetic={Boolean(manifest.is_synthetic)}
+            label={`SYNTHETIC HELD-OUT (${manifest.shared_engines_between_train_and_test} SHARED ENGINES)`}
+          />
         </div>
 
         <div className="grid-4">
-          <div className="kpi-card nominal">
-            <div className="kpi-label">
-              9-Class Held-Out Macro-F1 (54-Traj Suite)
-            </div>
-            <div className="kpi-value sm" style={{ color: '#4ade80' }}>
-              {(clsMetrics.macro_f1 * 100).toFixed(2)}%
-            </div>
-            <div className="kpi-sub">
-              Overall Accuracy: {(clsMetrics.overall_accuracy * 100).toFixed(2)}%
-              ({manifest.test_samples} test frames)
-            </div>
-          </div>
-
-          <div className="kpi-card info">
-            <div className="kpi-label">Anomaly Detector (IsolationForest)</div>
-            <div className="kpi-value sm" style={{ color: '#38bdf8' }}>
-              Recall: {(anomMetrics.recall * 100).toFixed(1)}%
-            </div>
-            <div className="kpi-sub">
-              False Alarm Rate: {(anomMetrics.false_alarm_rate * 100).toFixed(2)}%
-              | Precision: {(anomMetrics.precision * 100).toFixed(1)}%
-            </div>
-          </div>
-
-          <div className="kpi-card caution">
-            <div className="kpi-label">Held-Out RUL Error (XGBoost + RF)</div>
-            <div className="kpi-value sm" style={{ color: '#fbbf24' }}>
-              MAE:{' '}
-              {rulMetrics.xgboost_held_out_mae_hours ??
-                rulMetrics.held_out_mae_hours}{' '}
-              hrs
-            </div>
-            <div className="kpi-sub">
-              RMSE:{' '}
-              {rulMetrics.xgboost_held_out_rmse_hours ??
-                rulMetrics.held_out_rmse_hours}{' '}
-              hrs (N={rulMetrics.evaluated_samples})
-            </div>
-          </div>
-
-          <div className="kpi-card nominal">
-            <div className="kpi-label">Live-Twin Leakage Audit</div>
-            <div className="kpi-value sm" style={{ color: '#4ade80' }}>
-              0 Shared Engines
-            </div>
-            <div className="kpi-sub">
-              Train: {manifest.train_trajectories} traj ({manifest.train_samples}{' '}
-              rows) | Test: {manifest.test_trajectories} traj (
-              {manifest.test_samples} rows)
-            </div>
-          </div>
+          <KpiTile
+            label="9-Class Macro-F1 (Synthetic held-out)"
+            value={clsMetrics.macro_f1 * 100}
+            precision={2}
+            unit="%"
+            status="nominal"
+            subtext={`Synthetic held-out Accuracy: ${(
+              clsMetrics.overall_accuracy * 100
+            ).toFixed(2)}% (${manifest.test_samples} test frames)`}
+          />
+          <KpiTile
+            label="Anomaly Recall (Synthetic held-out)"
+            value={anomMetrics.recall * 100}
+            precision={1}
+            unit="%"
+            status="info"
+            subtext={`Synthetic held-out FAR: ${(
+              anomMetrics.false_alarm_rate * 100
+            ).toFixed(2)}% | Precision: ${(
+              anomMetrics.precision * 100
+            ).toFixed(1)}%`}
+          />
+          <KpiTile
+            label="RUL MAE Error (Synthetic held-out)"
+            value={
+              rulMetrics.xgboost_held_out_mae_hours ??
+              rulMetrics.held_out_mae_hours
+            }
+            precision={3}
+            unit="hrs"
+            status="caution"
+            subtext={`Synthetic held-out RMSE: ${
+              rulMetrics.xgboost_held_out_rmse_hours ??
+              rulMetrics.held_out_rmse_hours
+            } hrs (N=${rulMetrics.evaluated_samples})`}
+          />
+          <KpiTile
+            label="Leakage Audit (Synthetic held-out)"
+            value={`${manifest.shared_engines_between_train_and_test} Shared Engines`}
+            status="nominal"
+            subtext={`Train: ${manifest.train_trajectories} traj (${manifest.train_samples} rows) | Test: ${manifest.test_trajectories} traj (${manifest.test_samples} rows)`}
+          />
         </div>
 
-        {ppt100k?.held_out_test_metrics && (
+        {ppt100k?.held_out_test_metrics && ppt100k.dataset_manifest && (
           <div className="grid-4" style={{ marginBottom: 0 }}>
-            <div className="kpi-card nominal">
-              <div className="kpi-label">100k / 50-Engine Held-Out Macro-F1</div>
-              <div className="kpi-value sm" style={{ color: '#4ade80' }}>
-                {(
-                  ppt100k.held_out_test_metrics.classification.macro_f1 * 100
-                ).toFixed(2)}
-                %
-              </div>
-              <div className="kpi-sub">
-                Test Split: 15,000 rows (7 held-out engines) | Accuracy: 98.25%
-              </div>
-            </div>
-
-            <div className="kpi-card info">
-              <div className="kpi-label">
-                100k Anomaly Detection (IsolationForest)
-              </div>
-              <div className="kpi-value sm" style={{ color: '#38bdf8' }}>
-                Recall:{' '}
-                {(
-                  ppt100k.held_out_test_metrics.anomaly_detection.recall * 100
-                ).toFixed(2)}
-                %
-              </div>
-              <div className="kpi-sub">
-                Held-Out FAR:{' '}
-                {(
-                  ppt100k.held_out_test_metrics.anomaly_detection
-                    .false_alarm_rate * 100
-                ).toFixed(2)}
-                % | Val FAR: 3.01%
-              </div>
-            </div>
-
-            <div className="kpi-card caution">
-              <div className="kpi-label">100k XGBoost RUL (Cycles & Hours)</div>
-              <div className="kpi-value sm" style={{ color: '#fbbf24' }}>
-                MAE:{' '}
-                {ppt100k.held_out_test_metrics.rul_xgboost.held_out_mae_cycles}{' '}
-                cyc
-              </div>
-              <div className="kpi-sub">
-                RMSE:{' '}
-                {ppt100k.held_out_test_metrics.rul_xgboost.held_out_rmse_cycles}{' '}
-                cyc (
-                {ppt100k.held_out_test_metrics.rul_xgboost.held_out_mae_hours}{' '}
-                hrs MAE)
-              </div>
-            </div>
-
-            <div className="kpi-card nominal">
-              <div className="kpi-label">
-                100k Engine-Disjoint Split (70 / 15 / 15)
-              </div>
-              <div className="kpi-value sm" style={{ color: '#4ade80' }}>
-                50 Engines (0 Overlap)
-              </div>
-              <div className="kpi-sub">
-                Train: 35 (70k) | Val: 8 (15k) | Test: 7 (15k) | SF F1:{' '}
-                {(
-                  ppt100k.held_out_test_metrics.sensor_fault_isolation.f1 * 100
-                ).toFixed(1)}
-                %
-              </div>
-            </div>
+            <KpiTile
+              label="100k Macro-F1 (Synthetic held-out)"
+              value={
+                ppt100k.held_out_test_metrics.classification.macro_f1 * 100
+              }
+              precision={2}
+              unit="%"
+              status="nominal"
+              subtext={`Synthetic held-out Test: ${
+                ppt100k.dataset_manifest.splits?.test?.row_count ?? 0
+              } rows (${
+                ppt100k.dataset_manifest.splits?.test?.engine_count ?? 0
+              } engines) | Acc: ${(
+                ppt100k.held_out_test_metrics.classification.overall_accuracy *
+                100
+              ).toFixed(2)}%`}
+            />
+            <KpiTile
+              label="100k Anomaly Recall (Synthetic held-out)"
+              value={
+                ppt100k.held_out_test_metrics.anomaly_detection.recall * 100
+              }
+              precision={2}
+              unit="%"
+              status="info"
+              subtext={`Synthetic held-out FAR: ${(
+                ppt100k.held_out_test_metrics.anomaly_detection
+                  .false_alarm_rate * 100
+              ).toFixed(2)}% | Val FAR: ${(
+                (ppt100k.validation_metrics?.anomaly_detection
+                  ?.false_alarm_rate ?? 0) * 100
+              ).toFixed(2)}%`}
+            />
+            <KpiTile
+              label="100k XGBoost RUL (Synthetic held-out)"
+              value={
+                ppt100k.held_out_test_metrics.rul_xgboost.held_out_mae_cycles
+              }
+              precision={3}
+              unit="cyc"
+              status="caution"
+              subtext={`Synthetic held-out RMSE: ${ppt100k.held_out_test_metrics.rul_xgboost.held_out_rmse_cycles} cyc (${ppt100k.held_out_test_metrics.rul_xgboost.held_out_mae_hours} hrs MAE)`}
+            />
+            <KpiTile
+              label="100k Disjoint Split (Synthetic held-out)"
+              value={`${ppt100k.dataset_manifest.total_distinct_engines} Engines`}
+              status="nominal"
+              subtext={`Train: ${
+                ppt100k.dataset_manifest.splits?.train?.engine_count ?? 0
+              } | Val: ${
+                ppt100k.dataset_manifest.splits?.validation?.engine_count ?? 0
+              } | Test: ${
+                ppt100k.dataset_manifest.splits?.test?.engine_count ?? 0
+              } | SF F1: ${(
+                ppt100k.held_out_test_metrics.sensor_fault_isolation.f1 * 100
+              ).toFixed(1)}%`}
+            />
           </div>
         )}
-      </div>
-
-      {/* SECTION B: EXTERNAL EXPERIMENTAL BENCHMARK RESULTS */}
-      <div className="panel-card" style={{ borderLeft: '3px solid #22c55e' }}>
-        <div className="panel-card-header">
-          <div className="panel-card-title">
-            <ShieldCheck size={14} /> Part B — External Experimental Engine
-            Benchmark Validation (Real Test-Cell Datasets)
-          </div>
-          <span className="badge badge-nominal">
-            REAL EXPERIMENTAL BENCHMARKS (RUN-DISJOINT)
-          </span>
-        </div>
-        <div className="grid-2" style={{ marginBottom: 0 }}>
-          <div
-            style={{
-              background: 'rgba(0,0,0,0.22)',
-              padding: 12,
-              borderRadius: 6,
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginBottom: 6,
-              }}
-            >
-              <strong style={{ color: '#38bdf8' }}>
-                LiU-ICE-Benchmark-DXC25 (2025)
-              </strong>
-              <span className="badge badge-nominal">288,623 ROWS · 8 WLTP RUNS</span>
-            </div>
-            <div className="mono" style={{ fontSize: 11.5, lineHeight: 1.7 }}>
-              <div>
-                • 4-Class Decoupled Residual LR: <strong>0.5874 Macro-F1</strong>{' '}
-                | <strong>0.6903 Balanced Accuracy</strong>
-              </div>
-              <div>
-                • Held-Out Normal False Alarm Rate: <strong>0.90% FAR</strong> |
-                Intercooler Leakage (<code>f_pic</code>) Recall:{' '}
-                <strong>99.50%</strong>
-              </div>
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: 'rgba(0,0,0,0.22)',
-              padding: 12,
-              borderRadius: 6,
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginBottom: 6,
-              }}
-            >
-              <strong style={{ color: '#4ade80' }}>
-                Marine-Engine-Fault-v1.0 (Matsui 257 kW Turbo Diesel)
-              </strong>
-              <span className="badge badge-nominal">114,770 ROWS · 16 RUNS</span>
-            </div>
-            <div className="mono" style={{ fontSize: 11.5, lineHeight: 1.7 }}>
-              <div>
-                • 6-Class Multi-Fault Classifier: <strong>0.5742 Macro-F1</strong>{' '}
-                | <strong>0.6486 Balanced Accuracy</strong>
-              </div>
-              <div>
-                • Schmitt-Trigger Hysteresis Anomaly Gate:{' '}
-                <strong>0.00% Normal FAR</strong> | <strong>7/7 Fault Runs</strong>{' '}
-                detected (<strong>0.7518 Balanced Accuracy</strong>)
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      </GlassPanel>
 
       <div className="grid-2">
-        <div className="panel-card">
+        <GlassPanel className="panel-card">
           <div className="panel-card-header">
             <div className="panel-card-title">
-              <Award size={14} /> Per-Class Precision, Recall, F1 & Support
-              (Held-Out Test Set)
+              <Award size={14} /> Per-Class Precision, Recall, F1 &amp; Support
+              (Synthetic held-out)
             </div>
+            <SyntheticBadge isSynthetic={true} label="Synthetic held-out" />
           </div>
           <table className="data-table mono">
             <thead>
               <tr>
                 <th>Diagnostic Class</th>
-                <th>Precision</th>
-                <th>Recall</th>
-                <th>F1-Score</th>
+                <th>Precision (Synthetic held-out)</th>
+                <th>Recall (Synthetic held-out)</th>
+                <th>F1-Score (Synthetic held-out)</th>
                 <th>Support</th>
               </tr>
             </thead>
             <tbody>
               {Object.entries(clsMetrics.per_class).map(
-                ([clsName, m]: [string, any]) => (
+                ([clsName, m]: [string, PerClassMetric]) => (
                   <tr key={clsName}>
                     <td>{clsName}</td>
                     <td>{(m.precision * 100).toFixed(1)}%</td>
                     <td>{(m.recall * 100).toFixed(1)}%</td>
-                    <td style={{ fontWeight: 700, color: '#38bdf8' }}>
+                    <td style={{ fontWeight: 700, color: 'var(--cyan)' }}>
                       {(m.f1 * 100).toFixed(1)}%
                     </td>
                     <td>{m.support}</td>
@@ -889,13 +538,14 @@ export const ModelEvaluationScreen: React.FC<{
               )}
             </tbody>
           </table>
-        </div>
+        </GlassPanel>
 
-        <div className="panel-card">
+        <GlassPanel className="panel-card">
           <div className="panel-card-header">
             <div className="panel-card-title">
-              9×9 Confusion Matrix (Rows = Ground Truth, Cols = Predicted)
+              9×9 Confusion Matrix (Synthetic held-out)
             </div>
+            <SyntheticBadge isSynthetic={true} label="Synthetic held-out" />
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table className="data-table mono" style={{ fontSize: 11 }}>
@@ -903,7 +553,7 @@ export const ModelEvaluationScreen: React.FC<{
                 <tr>
                   <th>True \ Pred</th>
                   {clsMetrics.classes.map((c: string, i: number) => (
-                    <th key={i} title={c}>
+                    <th key={c} title={c}>
                       C{i + 1}
                     </th>
                   ))}
@@ -912,7 +562,7 @@ export const ModelEvaluationScreen: React.FC<{
               <tbody>
                 {clsMetrics.confusion_matrix.map(
                   (row: number[], rIdx: number) => (
-                    <tr key={rIdx}>
+                    <tr key={clsMetrics.classes[rIdx] || rIdx}>
                       <td title={clsMetrics.classes[rIdx]}>
                         <strong>C{rIdx + 1}:</strong>{' '}
                         {clsMetrics.classes[rIdx].slice(0, 14)}
@@ -939,52 +589,67 @@ export const ModelEvaluationScreen: React.FC<{
               </tbody>
             </table>
           </div>
-        </div>
+        </GlassPanel>
       </div>
 
       <div className="grid-2">
-        <div className="panel-card">
+        <GlassPanel className="panel-card">
           <div className="panel-card-header">
             <div className="panel-card-title">
-              Isolation Forest Precision-Recall Curve (Held-Out Test Set)
+              Isolation Forest Precision-Recall Curve (Synthetic held-out)
             </div>
           </div>
           <div style={{ height: 220 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={anomMetrics.pr_curve}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a2440" />
-                <XAxis dataKey="recall" stroke="#8899bb" />
-                <YAxis stroke="#8899bb" domain={[0.5, 1.02]} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--border-subtle, #1a2440)"
+                />
+                <XAxis
+                  dataKey="recall"
+                  stroke="var(--text-muted, #8899bb)"
+                />
+                <YAxis
+                  stroke="var(--text-muted, #8899bb)"
+                  domain={[0.5, 1.02]}
+                />
                 <Tooltip />
                 <Legend />
                 <Line
                   type="monotone"
                   dataKey="precision"
-                  name="Anomaly Precision vs Recall"
+                  name="Anomaly Precision vs Recall (Synthetic held-out)"
                   stroke="#38bdf8"
                   strokeWidth={2}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </GlassPanel>
 
-        <div className="panel-card">
+        <GlassPanel className="panel-card">
           <div className="panel-card-header">
             <div className="panel-card-title">
-              Random Forest Feature Importance Ranking
+              Random Forest Feature Importance Ranking (Synthetic held-out)
             </div>
           </div>
           <div style={{ height: 220 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={importanceData.slice(0, 10)} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a2440" />
-                <XAxis type="number" stroke="#8899bb" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--border-subtle, #1a2440)"
+                />
+                <XAxis
+                  type="number"
+                  stroke="var(--text-muted, #8899bb)"
+                />
                 <YAxis
                   type="category"
                   dataKey="feature"
                   width={165}
-                  stroke="#8899bb"
+                  stroke="var(--text-muted, #8899bb)"
                   fontSize={10.5}
                 />
                 <Tooltip />
@@ -992,28 +657,34 @@ export const ModelEvaluationScreen: React.FC<{
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </GlassPanel>
       </div>
 
-      <div className="panel-card">
+      <GlassPanel className="panel-card">
         <div className="panel-card-header">
           <div className="panel-card-title">
-            Dedicated Sensor-Fault Isolator & XGBoost Stack Disclosure
+            Dedicated Sensor-Fault Isolator &amp; XGBoost Stack Disclosure
+            (Synthetic held-out)
           </div>
         </div>
         <div className="mono" style={{ fontSize: 12, lineHeight: 1.7 }}>
           <div>
-            • <strong>Sensor-Fault Isolator ({sfMetrics.isolator_version}):</strong>{' '}
+            •{' '}
+            <strong>
+              Sensor-Fault Isolator ({sfMetrics.isolator_version}, Synthetic
+              held-out):
+            </strong>{' '}
             Precision={(sfMetrics.precision * 100).toFixed(1)}%, Recall=
-            {(sfMetrics.recall * 100).toFixed(1)}% (TP={sfMetrics.true_positives}
-            , FP={sfMetrics.false_positives}, FN={sfMetrics.false_negatives})
+            {(sfMetrics.recall * 100).toFixed(1)}%, F1=
+            {(sfMetrics.f1 * 100).toFixed(1)}% (TP={sfMetrics.true_positives},
+            FP={sfMetrics.false_positives}, FN={sfMetrics.false_negatives})
           </div>
           <div>
             • <strong>Estimator Stack Note:</strong>{' '}
             {report.xgboost_status || report.xgboost_fallback_note}
           </div>
         </div>
-      </div>
+      </GlassPanel>
     </div>
   );
 };
@@ -1022,30 +693,47 @@ export const ModelEvaluationScreen: React.FC<{
    SCREEN 9: ENGINEERING REPORTS, DATA SOURCES & SYSTEM CONFIGURATION
    ========================================================================= */
 export const ReportsAndSettingsScreen: React.FC<{
-  reports: Record<string, any>[];
-  catalog: Record<string, any> | null;
-  modelStatus: Record<string, any> | null;
-  backendHealth?: Record<string, any> | null;
+  reports: Record<string, unknown>[];
+  catalog: Record<string, unknown> | null;
+  modelStatus: Record<string, unknown> | null;
+  backendHealth?: Record<string, unknown> | null;
+  backendError?: string | null;
+  onRefreshBackend?: () => void;
   onNavigate?: (screen: string) => void;
-}> = ({ reports, catalog, modelStatus, onNavigate }) => {
+}> = ({
+  reports,
+  catalog,
+  modelStatus,
+  backendError = null,
+  onRefreshBackend,
+  onNavigate,
+}) => {
+  const typedReports = reports as unknown as EngineeringReportItem[];
   const [selectedReportId, setSelectedReportId] = useState<string>(
-    reports[0]?.report_id || ''
+    typedReports[0]?.report_id || ''
   );
-  const [activeReport, setActiveReport] = useState<Record<string, any> | null>(
-    reports[0] || null
-  );
+  const [activeReport, setActiveReport] =
+    useState<EngineeringReportItem | null>(typedReports[0] || null);
+  const [loadingReport, setLoadingReport] = useState<boolean>(false);
 
   useEffect(() => {
-    if (reports.length > 0 && !selectedReportId) {
-      setSelectedReportId(reports[0].report_id);
-      setActiveReport(reports[0]);
+    if (typedReports.length > 0 && !selectedReportId) {
+      setSelectedReportId(typedReports[0].report_id);
+      setActiveReport(typedReports[0]);
     }
-  }, [reports]);
+  }, [typedReports, selectedReportId]);
 
   const handleSelectReport = async (repId: string) => {
     setSelectedReportId(repId);
-    const full = await drishtiApi.getReport(repId);
-    setActiveReport(full);
+    setLoadingReport(true);
+    try {
+      const full = (await drishtiApi.getReport(
+        repId
+      )) as unknown as EngineeringReportItem;
+      setActiveReport(full);
+    } finally {
+      setLoadingReport(false);
+    }
   };
 
   const handleDownloadReportJson = () => {
@@ -1061,29 +749,60 @@ export const ReportsAndSettingsScreen: React.FC<{
     URL.revokeObjectURL(url);
   };
 
-  const physMeta = catalog?.physics_metadata;
-  const dqStats = modelStatus?.data_quality_stats;
+  const physMeta = (catalog?.physics_metadata ||
+    null) as PhysicsMetadata | null;
+  const dqStats = (modelStatus?.data_quality_stats ||
+    null) as DataQualityStats | null;
+  const canInterface = (catalog?.can_interface ||
+    null) as CanInterfaceMetadata | null;
+
+  if (backendError && typedReports.length === 0 && !catalog) {
+    return (
+      <GlassPanel className="panel-card">
+        <EmptyState
+          icon={<ShieldAlert size={32} />}
+          title="Engineering Reports Offline"
+          description={backendError}
+          action={
+            onRefreshBackend ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={onRefreshBackend}
+              >
+                Retry Connection
+              </button>
+            ) : undefined
+          }
+        />
+      </GlassPanel>
+    );
+  }
 
   return (
     <div>
       <div className="screen-header">
         <div className="screen-title-block">
           <div className="screen-eyebrow">
-            Validation · Scenario Reports, Physics Envelope & Stream Quality
+            Validation · Scenario Reports, Physics Envelope &amp; Stream Quality
           </div>
           <h1 className="screen-title">
-            Engineering Evaluation Reports & System Configuration
+            Engineering Evaluation Reports &amp; System Configuration
           </h1>
           <div className="screen-desc">
             Export scenario evaluation reports, inspect physics reference
             assumptions and operating envelopes, and audit telemetry
-            data-quality rejection counters.
+            data-quality rejection counters returned by the backend API.
           </div>
         </div>
         <div className="screen-actions">
           {onNavigate && (
-            <button className="btn" onClick={() => onNavigate('docs')}>
-              <Activity size={13} /> Open Data Sources & Tech Docs
+            <button
+              type="button"
+              className="btn"
+              onClick={() => onNavigate('docs')}
+            >
+              <Activity size={13} /> Open Data Sources &amp; Tech Docs
             </button>
           )}
           <select
@@ -1092,13 +811,14 @@ export const ReportsAndSettingsScreen: React.FC<{
             onChange={(e) => handleSelectReport(e.target.value)}
             aria-label="Select Engineering Report"
           >
-            {reports.map((r) => (
+            {typedReports.map((r) => (
               <option key={r.report_id} value={r.report_id}>
                 {r.report_id} — {r.engine_id} ({r.mission_id})
               </option>
             ))}
           </select>
           <button
+            type="button"
             className="btn btn-primary"
             onClick={handleDownloadReportJson}
             disabled={!activeReport}
@@ -1108,100 +828,116 @@ export const ReportsAndSettingsScreen: React.FC<{
         </div>
       </div>
 
-      {activeReport && (
-        <div className="panel-card">
+      {loadingReport ? (
+        <GlassPanel className="panel-card" style={{ marginBottom: 14 }}>
+          <Skeleton variant="text" width="35%" height={22} />
+          <Skeleton
+            variant="rect"
+            width="100%"
+            height={110}
+            style={{ marginTop: 10 }}
+          />
+        </GlassPanel>
+      ) : activeReport ? (
+        <GlassPanel className="panel-card" style={{ marginBottom: 14 }}>
           <div className="panel-card-header">
             <div className="panel-card-title">
-              <FileText size={14} /> {activeReport.title}
+              <FileText size={14} /> {activeReport.title || activeReport.report_id}
             </div>
-            <span className="badge badge-synthetic">
-              REPORT ID: {activeReport.report_id}
-            </span>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <SyntheticBadge
+                isSynthetic={Boolean(activeReport.is_synthetic ?? true)}
+              />
+              <StatusChip
+                status="nominal"
+                label={`REPORT ID: ${activeReport.report_id}`}
+              />
+            </div>
           </div>
           <div className="grid-4">
-            <div>
-              <div className="kpi-label">Engine & Mission</div>
-              <div className="mono" style={{ fontWeight: 700 }}>
-                {activeReport.engine_id} / {activeReport.mission_id}
-              </div>
-              <div className="kpi-sub">
-                Source: {activeReport.data_source} (Synthetic:{' '}
-                {String(activeReport.is_synthetic)})
-              </div>
-            </div>
-            <div>
-              <div className="kpi-label">Scenario Ground Truth</div>
-              <div
-                className="mono"
-                style={{ fontWeight: 700, color: '#fbbf24' }}
-              >
-                {activeReport.scenario_configuration?.fault_class} (Severity{' '}
-                {activeReport.scenario_configuration?.severity})
-              </div>
-              <div className="kpi-sub">
-                Seed: {activeReport.scenario_configuration?.random_seed} |
-                Onset: {activeReport.scenario_configuration?.onset_time_sec}s
-              </div>
-            </div>
-            <div>
-              <div className="kpi-label">Measured Twin Classification</div>
-              <div
-                className="mono"
-                style={{ fontWeight: 700, color: '#38bdf8' }}
-              >
-                {activeReport.measured_results?.final_predicted_class} (
-                {(
-                  (activeReport.measured_results?.final_top_probability || 0) *
-                  100
-                ).toFixed(1)}
-                %)
-              </div>
-              <div className="kpi-sub">
-                HI: {activeReport.measured_results?.initial_health_index}% →{' '}
-                {activeReport.measured_results?.final_health_index}%
-              </div>
-            </div>
-            <div>
-              <div className="kpi-label">Peak Measured Residuals</div>
-              <div className="mono" style={{ fontSize: 12 }}>
-                |ΔCHT| max:{' '}
-                {activeReport.measured_results?.peak_abs_cht_residual_c} °C |
-                ΔOilP min:{' '}
-                {activeReport.measured_results?.min_oil_pressure_residual_bar}{' '}
-                bar
-              </div>
-              <div className="kpi-sub">
-                Alerts Generated: {activeReport.measured_results?.alert_count}
-              </div>
-            </div>
+            <KpiTile
+              label="Engine & Mission"
+              value={`${activeReport.engine_id} / ${activeReport.mission_id}`}
+              status="info"
+              subtext={`Created: ${activeReport.created_at ?? '—'} | Source: ${
+                activeReport.data_source ?? '—'
+              }`}
+            />
+            <KpiTile
+              label="Scenario Configuration"
+              value={`${
+                activeReport.scenario_configuration?.fault_class ?? '—'
+              } (Sev ${
+                activeReport.scenario_configuration?.severity ?? '—'
+              })`}
+              status="caution"
+              subtext={`Seed: ${
+                activeReport.scenario_configuration?.random_seed ?? '—'
+              } | Onset: ${
+                activeReport.scenario_configuration?.onset_time_sec ?? '—'
+              }s`}
+            />
+            <KpiTile
+              label="Measured Classification"
+              value={`${
+                activeReport.measured_results?.final_predicted_class ?? '—'
+              } (${(
+                (activeReport.measured_results?.final_top_probability || 0) *
+                100
+              ).toFixed(1)}%)`}
+              status="info"
+              subtext={`HI: ${
+                activeReport.measured_results?.initial_health_index ?? '—'
+              }% → ${
+                activeReport.measured_results?.final_health_index ?? '—'
+              }%`}
+            />
+            <KpiTile
+              label="Model & Rule Versions"
+              value={activeReport.ml_model_version ?? '—'}
+              status="nominal"
+              subtext={`Physics: ${
+                activeReport.physics_model_version ?? '—'
+              } | Alerts: ${activeReport.measured_results?.alert_count ?? 0}`}
+            />
           </div>
 
           <div style={{ marginTop: 8 }}>
-            <div className="kpi-label">Engineering Disclosures</div>
+            <div className="kpi-label">
+              Engineering Disclosures (/api/reports/{activeReport.report_id})
+            </div>
             {(activeReport.engineering_disclosures || []).map(
               (d: string, idx: number) => (
                 <div
                   key={idx}
                   className="mono"
-                  style={{ fontSize: 11.5, color: '#94a3b8' }}
+                  style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}
                 >
                   • {d}
                 </div>
               )
             )}
           </div>
-        </div>
+        </GlassPanel>
+      ) : (
+        <GlassPanel className="panel-card" style={{ marginBottom: 14 }}>
+          <EmptyState
+            icon={<FileText size={28} />}
+            title="No Engineering Reports Found"
+            description="Run a simulation scenario to generate and persist an engineering evaluation report."
+          />
+        </GlassPanel>
       )}
 
       <div className="grid-2">
-        <div className="panel-card">
+        <GlassPanel className="panel-card">
           <div className="panel-card-header">
             <div className="panel-card-title">
               <Settings size={14} /> Physics Reference Engine Supported Envelope
-              ({physMeta?.model_version})
+              ({physMeta?.model_version || '—'})
             </div>
           </div>
-          {physMeta && (
+          {physMeta ? (
             <>
               <table className="data-table mono" style={{ marginBottom: 10 }}>
                 <thead>
@@ -1216,7 +952,7 @@ export const ReportsAndSettingsScreen: React.FC<{
                 <tbody>
                   {Object.entries(
                     physMeta.supported_operating_envelope || {}
-                  ).map(([k, v]: [string, any]) => (
+                  ).map(([k, v]: [string, EnvelopeRange]) => (
                     <tr key={k}>
                       <td>{k}</td>
                       <td>{v.min}</td>
@@ -1228,27 +964,33 @@ export const ReportsAndSettingsScreen: React.FC<{
                 </tbody>
               </table>
               <div className="kpi-label">
-                Documented Equations & Assumptions
+                Documented Equations &amp; Assumptions
               </div>
               {(physMeta.assumptions || []).map((a: string, i: number) => (
                 <div
                   key={i}
-                  style={{ fontSize: 11.5, color: '#cbd5e1', marginBottom: 3 }}
+                  style={{
+                    fontSize: 11.5,
+                    color: 'var(--text-secondary)',
+                    marginBottom: 3,
+                  }}
                 >
                   • {a}
                 </div>
               ))}
             </>
+          ) : (
+            <Skeleton variant="rect" width="100%" height={180} />
           )}
-        </div>
+        </GlassPanel>
 
-        <div className="panel-card">
+        <GlassPanel className="panel-card">
           <div className="panel-card-header">
             <div className="panel-card-title">
-              Telemetry Stream Validator & CAN Interface Status
+              Telemetry Stream Validator &amp; CAN Interface Status
             </div>
           </div>
-          {dqStats && (
+          {dqStats ? (
             <table className="data-table mono" style={{ marginBottom: 12 }}>
               <thead>
                 <tr>
@@ -1284,8 +1026,10 @@ export const ReportsAndSettingsScreen: React.FC<{
                 </tr>
               </tbody>
             </table>
+          ) : (
+            <Skeleton variant="rect" width="100%" height={140} />
           )}
-          {catalog?.can_interface && (
+          {canInterface && (
             <div
               style={{
                 padding: 10,
@@ -1296,17 +1040,23 @@ export const ReportsAndSettingsScreen: React.FC<{
               <div className="kpi-label">
                 Modular CAN / SocketCAN Interface Probe
               </div>
-              <div className="mono" style={{ fontSize: 11.5, color: '#38bdf8' }}>
-                Adapter: {catalog.can_interface.adapter_class} | Mode:{' '}
-                {catalog.can_interface.mode} | Hardware Connected:{' '}
-                {String(catalog.can_interface.hardware_connected)}
+              <div className="mono" style={{ fontSize: 11.5, color: 'var(--cyan)' }}>
+                Adapter: {canInterface.adapter_class} | Mode:{' '}
+                {canInterface.mode} | Hardware Connected:{' '}
+                {String(canInterface.hardware_connected)}
               </div>
-              <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 4 }}>
-                {catalog.can_interface.disclosure}
+              <div
+                style={{
+                  fontSize: 11.5,
+                  color: 'var(--text-muted)',
+                  marginTop: 4,
+                }}
+              >
+                {canInterface.disclosure}
               </div>
             </div>
           )}
-        </div>
+        </GlassPanel>
       </div>
     </div>
   );
@@ -1316,11 +1066,21 @@ export const ReportsAndSettingsScreen: React.FC<{
    SCREEN 10: DATA SOURCES, SYSTEM STATUS & TECHNICAL DOCUMENTATION
    ========================================================================= */
 export const SystemStatusAndTechDocsScreen: React.FC<{
-  backendHealth: Record<string, any> | null;
-  catalog: Record<string, any> | null;
-  modelStatus: Record<string, any> | null;
-}> = ({ backendHealth, catalog, modelStatus }) => {
-  const [readiness, setReadiness] = useState<Record<string, any> | null>(null);
+  backendHealth: Record<string, unknown> | null;
+  catalog: Record<string, unknown> | null;
+  modelStatus: Record<string, unknown> | null;
+  backendError?: string | null;
+  onRefreshBackend?: () => void;
+}> = ({
+  backendHealth,
+  catalog,
+  modelStatus,
+  backendError = null,
+  onRefreshBackend,
+}) => {
+  const [readiness, setReadiness] = useState<Record<string, unknown> | null>(
+    null
+  );
 
   useEffect(() => {
     drishtiApi
@@ -1329,195 +1089,252 @@ export const SystemStatusAndTechDocsScreen: React.FC<{
       .catch(() => {});
   }, []);
 
-  const dqStats = modelStatus?.data_quality_stats;
-  const paramSpecs = catalog?.sih26054_eight_parameter_groups || [];
+  if (backendError && !backendHealth && !catalog) {
+    return (
+      <GlassPanel className="panel-card">
+        <EmptyState
+          icon={<ShieldAlert size={32} />}
+          title="System Status & Documentation Offline"
+          description={backendError}
+          action={
+            onRefreshBackend ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={onRefreshBackend}
+              >
+                Retry Connection
+              </button>
+            ) : undefined
+          }
+        />
+      </GlassPanel>
+    );
+  }
+
+  const dqStats = (modelStatus?.data_quality_stats ||
+    null) as DataQualityStats | null;
+  const paramSpecs = Array.isArray(catalog?.sih26054_eight_parameter_groups)
+    ? (catalog.sih26054_eight_parameter_groups as ParameterGroupSpecItem[])
+    : [];
+  const evalReport = (modelStatus?.evaluation_report ||
+    null) as EvaluationReportData | null;
+  const manifest = evalReport?.dataset_manifest;
+  const ppt100k = evalReport?.ppt_100k_evaluation;
+  const canInterface = (backendHealth?.can_interface ||
+    catalog?.can_interface ||
+    null) as CanInterfaceMetadata | null;
+
+  const readyStatus = String(readiness?.status || 'OK').toUpperCase();
+  const dbReady = readiness?.database_ready !== false;
+  const seededCount =
+    typeof readiness?.seeded_engine_count === 'number'
+      ? readiness.seeded_engine_count
+      : 0;
 
   return (
     <div>
       <div className="screen-header">
         <div className="screen-title-block">
           <div className="screen-eyebrow">
-            Validation · Dataset Provenance, System Readiness & SIH26054
+            Validation · Dataset Provenance, System Readiness &amp; SIH26054
             Architecture
           </div>
           <h1 className="screen-title">
-            Data Sources, System Status & Technical Documentation
+            Data Sources, System Status &amp; Technical Documentation
           </h1>
           <div className="screen-desc">
-            Dataset provenance register (Synthetic Twin Corpus + Verified Public
-            Piston Benchmarks), live subsystem readiness checks, data
-            dictionary, and architecture documentation.
+            Dataset provenance register, live subsystem readiness checks
+            (/health &amp; /ready), SIH26054 8-group data dictionary, and
+            architecture documentation.
           </div>
         </div>
-        <span className="badge badge-nominal">
-          <CheckCircle2 size={11} /> SYSTEM READY:{' '}
-          {readiness?.status?.toUpperCase() || 'OK'}
-        </span>
+        <StatusChip
+          status={dbReady ? 'nominal' : 'critical'}
+          label={`SYSTEM READY: ${readyStatus}`}
+        />
       </div>
 
       <div className="grid-4">
-        <div className="kpi-card nominal">
-          <div className="kpi-label">Backend & SQLite WAL Readiness</div>
-          <div className="kpi-value sm" style={{ color: '#4ade80' }}>
-            {readiness?.database_ready !== false ? 'READY (WAL)' : 'OFFLINE'}
-          </div>
-          <div className="kpi-sub">
-            Seeded Fleet: {readiness?.seeded_engine_count ?? 6} UAV Engines |
-            Schema v{backendHealth?.telemetry_schema_version || '1.0.0'}
-          </div>
-        </div>
-
-        <div className="kpi-card info">
-          <div className="kpi-label">Physics & ML Ensemble Status</div>
-          <div className="kpi-value sm" style={{ color: '#38bdf8' }}>
-            {backendHealth?.ml_models_loaded ? 'LOADED & ACTIVE' : 'FALLBACK'}
-          </div>
-          <div className="kpi-sub">
-            {backendHealth?.physics_model_version} |{' '}
-            {backendHealth?.ml_model_version}
-          </div>
-        </div>
-
-        <div className="kpi-card caution">
-          <div className="kpi-label">CAN / SocketCAN Hardware Adapter</div>
-          <div className="kpi-value sm" style={{ color: '#fbbf24' }}>
-            {backendHealth?.can_interface?.mode || 'SOFTWARE_CODEC_READY'}
-          </div>
-          <div className="kpi-sub">
-            29-Bit Extended IDs: 0x101–0x104 | HW Connected:{' '}
-            {String(backendHealth?.can_interface?.hardware_connected ?? false)}
-          </div>
-        </div>
-
-        <div className="kpi-card nominal">
-          <div className="kpi-label">Telemetry Stream Validator</div>
-          <div className="kpi-value sm" style={{ color: '#4ade80' }}>
-            {dqStats?.total_valid ?? 0} / {dqStats?.total_received ?? 0} Valid
-          </div>
-          <div className="kpi-sub">
-            Dup: {dqStats?.duplicate_count ?? 0} | Out-of-Order:{' '}
-            {dqStats?.out_of_order_count ?? 0} | Stale:{' '}
-            {dqStats?.stale_count ?? 0}
-          </div>
-        </div>
+        <KpiTile
+          label="Backend & SQLite WAL Readiness"
+          value={dbReady ? 'READY (WAL)' : 'OFFLINE'}
+          status={dbReady ? 'nominal' : 'critical'}
+          subtext={`Seeded Fleet: ${seededCount} UAV Engines | Schema v${String(
+            backendHealth?.telemetry_schema_version || '—'
+          )}`}
+        />
+        <KpiTile
+          label="Physics & ML Ensemble Status"
+          value={
+            backendHealth?.ml_models_loaded ? 'LOADED & ACTIVE' : 'FALLBACK'
+          }
+          status={backendHealth?.ml_models_loaded ? 'info' : 'caution'}
+          subtext={`${String(
+            backendHealth?.physics_model_version || '—'
+          )} | ${String(backendHealth?.ml_model_version || '—')}`}
+        />
+        <KpiTile
+          label="CAN / SocketCAN Hardware Adapter"
+          value={canInterface?.mode || 'SOFTWARE_CODEC_READY'}
+          status="caution"
+          subtext={`Adapter: ${
+            canInterface?.adapter_class || '—'
+          } | HW Connected: ${String(
+            canInterface?.hardware_connected ?? false
+          )}`}
+        />
+        <KpiTile
+          label="Telemetry Stream Validator"
+          value={`${dqStats?.total_valid ?? 0} / ${
+            dqStats?.total_received ?? 0
+          } Valid`}
+          status="nominal"
+          subtext={`Dup: ${dqStats?.duplicate_count ?? 0} | Out-of-Order: ${
+            dqStats?.out_of_order_count ?? 0
+          } | Stale: ${dqStats?.stale_count ?? 0}`}
+        />
       </div>
 
-      {/* DATASET PROVENANCE REGISTER */}
-      <div className="panel-card">
+      {/* DATASET PROVENANCE REGISTER (FROM API MANIFESTS) */}
+      <GlassPanel className="panel-card">
         <div className="panel-card-header">
           <div className="panel-card-title">
-            Verified Dataset Provenance & Separation of Synthetic vs.
-            Experimental Data
+            API Dataset Provenance Register (/api/model-status)
           </div>
-          <span className="badge badge-synthetic">
-            ZERO DATA FABRICATION POLICY
-          </span>
+          <SyntheticBadge
+            isSynthetic={true}
+            label="SYNTHETIC PROVENANCE DISCLOSURE"
+          />
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table className="data-table mono" style={{ fontSize: 11 }}>
             <thead>
               <tr>
                 <th>Dataset ID</th>
-                <th>Source & Provenance</th>
-                <th>Scale & Split</th>
-                <th>Role in DRISHTI</th>
+                <th>Source &amp; Provenance Statement</th>
+                <th>Scale &amp; Split (API Manifest)</th>
+                <th>Measured Held-Out Metrics</th>
                 <th>Evidence Classification</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>
-                  <strong>DRISHTI-SynthCorpus-v1.0</strong>
-                </td>
-                <td>Deterministic Fault Simulator (Rotax 914F Ref Twin)</td>
-                <td>
-                  54 Trajectories (1,944 frames: 36 train = 1,296 / 18 test =
-                  648; 0 shared engines)
-                </td>
-                <td>
-                  Live-Twin 9-Class RF (0.9769 Macro-F1, 0.9738 Acc), IsoForest
-                  (0.8875 Recall, 0.0119 FAR), XGBoost RUL (2.800 h MAE)
-                </td>
-                <td>
-                  <span className="badge badge-synthetic">
-                    100% SYNTHETIC (LABELED)
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>DRISHTI-SynthCorpus-100k-v2.0</strong>
-                </td>
-                <td>50-Engine Multi-Profile Corpus (Seed 2026)</td>
-                <td>
-                  100,000 rows | 50 Engines (35 Train=70k / 8 Val=15k / 7
-                  Test=15k; 0 shared engines)
-                </td>
-                <td>
-                  Large-Scale 9-Class RF (0.9853 F1, 0.9825 Acc), IsoForest
-                  (0.9180 Recall, 0.0255 Test FAR) & XGBoost RUL (8.782 cyc /
-                  7.571 h MAE)
-                </td>
-                <td>
-                  <span className="badge badge-synthetic">
-                    100% SYNTHETIC (LABELED)
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>LiU-ICE-Benchmark-DXC25 (2025)</strong>
-                </td>
-                <td>
-                  Linköping University Vehicular Systems (DOI:
-                  10.48550/arXiv.2408.13269)
-                </td>
-                <td>
-                  288,623 rows across 8 WLTP runs (4 train=125,265 / 4
-                  test=125,346; stride-5 N=21,657)
-                </td>
-                <td>
-                  Phase 4 Unsigned Decoupled Residual 4-Class LR (0.5874
-                  Macro-F1, 0.6903 Bal Acc, 0.90% Normal FAR, 0.9950 f_pic
-                  Recall)
-                </td>
-                <td>
-                  <span className="badge badge-nominal">
-                    REAL TEST-CELL BENCHMARK
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Marine-Engine-Fault-v1.0 (2024)</strong>
-                </td>
-                <td>
-                  Matsui MU323DGSC 3-Cyl 257 kW Turbo Marine Diesel (Zenodo DOI:
-                  10.5281/zenodo.19857425)
-                </td>
-                <td>
-                  114,770 rows across 16 physical runs (9 train=70,711 / 7
-                  test=44,059; 0 shared runs)
-                </td>
-                <td>
-                  Phase 4 6-Class LR (0.5742 Macro-F1, 0.6486 Bal Acc) &
-                  Schmitt-Trigger Hysteresis Anomaly Gate (0.00% Normal FAR, 7/7
-                  fault runs detected, 0.7518 Bal Acc)
-                </td>
-                <td>
-                  <span className="badge badge-nominal">
-                    REAL EXPERIMENTAL BENCHMARK
-                  </span>
-                </td>
-              </tr>
+              {manifest && (
+                <tr>
+                  <td>
+                    <strong>{manifest.dataset_id}</strong>
+                  </td>
+                  <td>
+                    {manifest.provenance_statement ||
+                      evalReport?.data_provenance_warning}
+                  </td>
+                  <td>
+                    {manifest.total_trajectories} Trajectories (
+                    {manifest.total_samples} frames: {manifest.train_trajectories}{' '}
+                    train = {manifest.train_samples} /{' '}
+                    {manifest.test_trajectories} test = {manifest.test_samples};{' '}
+                    {manifest.shared_engines_between_train_and_test} shared
+                    engines)
+                  </td>
+                  <td>
+                    Macro-F1:{' '}
+                    {(
+                      (evalReport?.classification_metrics.macro_f1 ?? 0) * 100
+                    ).toFixed(2)}
+                    %, Acc:{' '}
+                    {(
+                      (evalReport?.classification_metrics.overall_accuracy ??
+                        0) * 100
+                    ).toFixed(2)}
+                    %, IsoForest Recall:{' '}
+                    {(
+                      (evalReport?.anomaly_detection_metrics.recall ?? 0) * 100
+                    ).toFixed(1)}
+                    %, RUL MAE:{' '}
+                    {evalReport?.rul_estimation_metrics
+                      .xgboost_held_out_mae_hours ??
+                      evalReport?.rul_estimation_metrics.held_out_mae_hours}{' '}
+                    h
+                  </td>
+                  <td>
+                    <SyntheticBadge
+                      isSynthetic={Boolean(manifest.is_synthetic)}
+                      label="SYNTHETIC HELD-OUT"
+                    />
+                  </td>
+                </tr>
+              )}
+              {ppt100k?.dataset_manifest && ppt100k.held_out_test_metrics && (
+                <tr>
+                  <td>
+                    <strong>{ppt100k.dataset_manifest.dataset_version}</strong>
+                  </td>
+                  <td>
+                    {ppt100k.dataset_manifest.provenance_disclosure ||
+                      `Seed ${ppt100k.dataset_manifest.base_seed}`}
+                  </td>
+                  <td>
+                    {ppt100k.dataset_manifest.total_rows} rows |{' '}
+                    {ppt100k.dataset_manifest.total_distinct_engines} Engines (
+                    Train:{' '}
+                    {ppt100k.dataset_manifest.splits?.train?.engine_count ?? 0}{' '}
+                    [{ppt100k.dataset_manifest.splits?.train?.row_count ?? 0}] /
+                    Val:{' '}
+                    {ppt100k.dataset_manifest.splits?.validation?.engine_count ??
+                      0}{' '}
+                    [
+                    {ppt100k.dataset_manifest.splits?.validation?.row_count ??
+                      0}
+                    ] / Test:{' '}
+                    {ppt100k.dataset_manifest.splits?.test?.engine_count ?? 0} [
+                    {ppt100k.dataset_manifest.splits?.test?.row_count ?? 0}])
+                  </td>
+                  <td>
+                    Macro-F1:{' '}
+                    {(
+                      ppt100k.held_out_test_metrics.classification.macro_f1 *
+                      100
+                    ).toFixed(2)}
+                    %, Acc:{' '}
+                    {(
+                      ppt100k.held_out_test_metrics.classification
+                        .overall_accuracy * 100
+                    ).toFixed(2)}
+                    %, Recall:{' '}
+                    {(
+                      ppt100k.held_out_test_metrics.anomaly_detection.recall *
+                      100
+                    ).toFixed(2)}
+                    %, RUL MAE:{' '}
+                    {
+                      ppt100k.held_out_test_metrics.rul_xgboost
+                        .held_out_mae_cycles
+                    }{' '}
+                    cyc (
+                    {
+                      ppt100k.held_out_test_metrics.rul_xgboost
+                        .held_out_mae_hours
+                    }{' '}
+                    h)
+                  </td>
+                  <td>
+                    <SyntheticBadge
+                      isSynthetic={Boolean(
+                        ppt100k.dataset_manifest.is_synthetic
+                      )}
+                      label="SYNTHETIC HELD-OUT"
+                    />
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-      </div>
+      </GlassPanel>
 
       {/* DATA DICTIONARY & 8 PARAMETER GROUPS */}
       <div className="grid-2">
-        <div className="panel-card">
+        <GlassPanel className="panel-card">
           <div className="panel-card-header">
             <div className="panel-card-title">
               SIH26054 Data Dictionary — All 8 Monitored Parameter Groups
@@ -1536,7 +1353,7 @@ export const SystemStatusAndTechDocsScreen: React.FC<{
                 </tr>
               </thead>
               <tbody>
-                {paramSpecs.map((p: any) => (
+                {paramSpecs.map((p: ParameterGroupSpecItem) => (
                   <tr key={p.group_id}>
                     <td>#{p.group_id}</td>
                     <td>
@@ -1564,42 +1381,49 @@ export const SystemStatusAndTechDocsScreen: React.FC<{
               </tbody>
             </table>
           </div>
-        </div>
+        </GlassPanel>
 
-        <div className="panel-card">
+        <GlassPanel className="panel-card">
           <div className="panel-card-header">
             <div className="panel-card-title">
-              Architecture, Security & Future Hardware Integration Roadmap
+              Architecture, Security &amp; Future Hardware Integration Roadmap
             </div>
           </div>
           <div
             className="mono"
-            style={{ fontSize: 11.5, color: '#cbd5e1', lineHeight: 1.7 }}
+            style={{
+              fontSize: 11.5,
+              color: 'var(--text-secondary)',
+              lineHeight: 1.7,
+            }}
           >
             <div>
               • <strong>Modular 5-Layer Architecture:</strong> (1) Telemetry
-              Ingestion & Validator (`SocketCAN` codec, CSV, REST, WebSocket) →
-              (2) Physics Reference Baseline (`Rotax914-Simplified-Ref-v1.0`) →
-              (3) Deterministic Residual & Sliding-Window Feature Extractor (17
-              features, W=20) → (4) ML Ensemble (`RandomForest`,
-              `IsolationForest`, `XGBRegressor`, `SensorFaultIsolator`) → (5)
-              SQLite WAL Store & 3D React Workstation.
+              Ingestion &amp; Validator (`SocketCAN` codec, CSV, REST,
+              WebSocket) → (2) Physics Reference Baseline (
+              {String(backendHealth?.physics_model_version || '—')}) → (3)
+              Deterministic Residual &amp; Sliding-Window Feature Extractor (
+              {evalReport?.feature_names.length ?? 0} features) → (4) ML
+              Ensemble (`RandomForest`, `IsolationForest`, `XGBRegressor`,
+              `SensorFaultIsolator`) → (5) SQLite WAL Store &amp; 3D React
+              Workstation.
             </div>
             <div>
-              • <strong>Prototype Security & Reliability Controls:</strong>{' '}
-              Strict Pydantic range/enum validation, duplicate/stale/out-of-order
-              frame detection, parameterized SQLite queries, `/health` and
-              `/ready` probes, and `.env.example` externalized configuration.
+              • <strong>Prototype Security &amp; Reliability Controls:</strong>{' '}
+              Strict Pydantic range/enum validation,
+              duplicate/stale/out-of-order frame detection, parameterized SQLite
+              queries, `/health` and `/ready` probes, and `.env.example`
+              externalized configuration.
             </div>
             <div>
               • <strong>Future Defence Deployment Roadmap:</strong> Connect
-              physical UAV FADEC / Rotax 914 ECU via isolated USB-CAN transceiver
-              (`python-can` on `can0` at 500 kbps), add mTLS/JWT operator RBAC,
+              physical UAV FADEC / Rotax 914 ECU via isolated USB-CAN
+              transceiver (`python-can` on `can0`), add mTLS/JWT operator RBAC,
               and calibrate thermal/vibration transfer functions on DRDO
               propulsion test-bed runs.
             </div>
           </div>
-        </div>
+        </GlassPanel>
       </div>
     </div>
   );

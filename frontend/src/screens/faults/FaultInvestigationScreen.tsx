@@ -27,14 +27,16 @@ import {
 } from '../../components/ui';
 import {
   ExplainableAlert,
+  extractUnifiedDiagnosis,
   FourValueDigitalTwinState,
+  RESIDUAL_ALERT_THRESHOLDS,
 } from '../../types/telemetry';
 
 export interface FaultInvestigationScreenProps {
   engineId: string;
   latestState: FourValueDigitalTwinState | null;
   alerts: ExplainableAlert[];
-  catalog?: Record<string, any> | null;
+  catalog?: Record<string, unknown> | null;
   onRefreshEngine: () => Promise<void>;
   backendError?: string | null;
 }
@@ -202,12 +204,11 @@ export const FaultInvestigationScreen: React.FC<FaultInvestigationScreenProps> =
     );
   }
 
+  const unifiedDiag = extractUnifiedDiagnosis(latestState);
   const sDiag = latestState.predicted.sensor_diagnosis;
-  const affectedSubsystem = mapFaultToSubsystemName(
-    latestState.predicted.predicted_fault_class
-  );
-  const activeFault = latestState.predicted.predicted_fault_class;
-  const isAnomaly = latestState.predicted.is_anomaly;
+  const affectedSubsystem = mapFaultToSubsystemName(unifiedDiag.faultClass);
+  const activeFault = unifiedDiag.faultClass;
+  const isAnomaly = unifiedDiag.isAnomaly;
 
   return (
     <div className="faults-workspace">
@@ -243,10 +244,10 @@ export const FaultInvestigationScreen: React.FC<FaultInvestigationScreenProps> =
       <div className="faults-kpi-grid">
         <KpiTile
           label="Primary Diagnostic Classification"
-          value={activeFault}
-          subtext={`Confidence: ${(latestState.predicted.top_probability * 100).toFixed(1)}% · ${latestState.predicted.diagnosis_certainty_status}`}
+          value={unifiedDiag.faultClass}
+          subtext={`Confidence: ${unifiedDiag.confidencePct}% · ${unifiedDiag.certainty}`}
           status={
-            activeFault === 'Normal'
+            unifiedDiag.faultClass === 'Normal'
               ? 'nominal'
               : latestState.predicted.health_index < 48
               ? 'critical'
@@ -258,14 +259,14 @@ export const FaultInvestigationScreen: React.FC<FaultInvestigationScreenProps> =
         <KpiTile
           label="Independent Anomaly Detector"
           value={isAnomaly ? 'ANOMALY ACTIVE' : 'NOMINAL'}
-          subtext={`Score: ${latestState.predicted.anomaly_score.toFixed(3)} (Thr: ${latestState.predicted.anomaly_threshold.toFixed(3)})`}
+          subtext={`Score: ${unifiedDiag.anomalyScore.toFixed(3)} (Thr: ${unifiedDiag.anomalyThreshold.toFixed(3)})`}
           status={isAnomaly ? 'caution' : 'nominal'}
           icon={<Activity size={18} />}
         />
 
         <KpiTile
           label="Sensor vs Engine Fault Isolation"
-          value={sDiag.diagnosis_status}
+          value={unifiedDiag.sensorStatus}
           subtext={`Suspected: ${
             sDiag.suspected_channels.length > 0
               ? sDiag.suspected_channels.join(', ')
@@ -344,7 +345,7 @@ export const FaultInvestigationScreen: React.FC<FaultInvestigationScreenProps> =
           </div>
 
           <div className="faults-panel-footer mono">
-            Certainty: {latestState.predicted.diagnosis_certainty_status} · Multi-class posterior sum:{' '}
+            Certainty: {unifiedDiag.certainty} · Multi-class posterior sum:{' '}
             {rankedProbabilities.reduce((acc, c) => acc + c.probability, 0).toFixed(2)}
           </div>
         </GlassPanel>
@@ -381,7 +382,7 @@ export const FaultInvestigationScreen: React.FC<FaultInvestigationScreenProps> =
           <div className="kpi-label" style={{ marginBottom: 6 }}>
             Instantaneous Physics Residuals (Actual − Expected)
             <span style={{ fontSize: 9.5, color: 'var(--text-muted)', fontWeight: 400, marginLeft: 6 }}>
-              (UI display bands [indicative])
+              (alert_engine.py thresholds)
             </span>
           </div>
           <table className="eng-table mono" style={{ fontSize: 11 }}>
@@ -401,7 +402,8 @@ export const FaultInvestigationScreen: React.FC<FaultInvestigationScreenProps> =
                 <td
                   style={{
                     color:
-                      Math.abs(latestState.calculated.cht_residual_c) >= 10
+                      Math.abs(latestState.calculated.cht_residual_c) >=
+                      RESIDUAL_ALERT_THRESHOLDS.cht_c
                         ? 'var(--color-caution)'
                         : 'var(--text-primary)',
                   }}
@@ -417,7 +419,8 @@ export const FaultInvestigationScreen: React.FC<FaultInvestigationScreenProps> =
                 <td
                   style={{
                     color:
-                      Math.abs(latestState.calculated.egt_residual_c) >= 25
+                      Math.abs(latestState.calculated.egt_residual_c) >=
+                      RESIDUAL_ALERT_THRESHOLDS.egt_c
                         ? 'var(--color-caution)'
                         : 'var(--text-primary)',
                   }}
@@ -433,7 +436,8 @@ export const FaultInvestigationScreen: React.FC<FaultInvestigationScreenProps> =
                 <td
                   style={{
                     color:
-                      latestState.calculated.oil_pressure_residual_bar < -0.35
+                      latestState.calculated.oil_pressure_residual_bar <=
+                      RESIDUAL_ALERT_THRESHOLDS.oil_pressure_bar
                         ? 'var(--color-critical)'
                         : 'var(--text-primary)',
                   }}
@@ -449,7 +453,8 @@ export const FaultInvestigationScreen: React.FC<FaultInvestigationScreenProps> =
                 <td
                   style={{
                     color:
-                      Math.abs(latestState.calculated.oil_temp_residual_c) >= 8
+                      Math.abs(latestState.calculated.oil_temp_residual_c) >=
+                      RESIDUAL_ALERT_THRESHOLDS.oil_temp_c
                         ? 'var(--color-caution)'
                         : 'var(--text-primary)',
                   }}
@@ -465,7 +470,8 @@ export const FaultInvestigationScreen: React.FC<FaultInvestigationScreenProps> =
                 <td
                   style={{
                     color:
-                      latestState.calculated.vibration_residual_mms >= 0.70
+                      latestState.calculated.vibration_residual_mms >=
+                      RESIDUAL_ALERT_THRESHOLDS.vibration_mms
                         ? 'var(--color-caution)'
                         : 'var(--text-primary)',
                   }}
@@ -481,7 +487,8 @@ export const FaultInvestigationScreen: React.FC<FaultInvestigationScreenProps> =
                 <td
                   style={{
                     color:
-                      Math.abs(latestState.calculated.fuel_flow_residual_lph) >= 1.8
+                      Math.abs(latestState.calculated.fuel_flow_residual_lph) >=
+                      RESIDUAL_ALERT_THRESHOLDS.fuel_flow_lph
                         ? 'var(--color-caution)'
                         : 'var(--text-primary)',
                   }}

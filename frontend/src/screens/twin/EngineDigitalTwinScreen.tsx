@@ -43,7 +43,9 @@ import {
 } from '../../components/ui';
 import {
   EngineRecord,
+  extractUnifiedDiagnosis,
   FourValueDigitalTwinState,
+  RESIDUAL_ALERT_THRESHOLDS,
 } from '../../types/telemetry';
 
 // Lazy-load the 3D viewport for performance and code-splitting
@@ -529,7 +531,7 @@ export const EngineDigitalTwinScreen: React.FC<EngineDigitalTwinScreenProps> = (
             <StatusChip status="info" label="DETERMINISTIC" />
           </div>
           <div className="mono" style={{ fontSize: 9.5, color: 'var(--text-muted)', marginBottom: 6, fontStyle: 'italic' }}>
-            Highlights: UI display bands (indicative; backend alert defaults in alert_engine.py)
+            Highlights: backend alert_engine.py thresholds (CHT 10, EGT 25, OilP -0.35, OilT 8, Vib 0.70, Fuel 1.8)
           </div>
 
           <div className="twin-matrix-body">
@@ -539,9 +541,8 @@ export const EngineDigitalTwinScreen: React.FC<EngineDigitalTwinScreenProps> = (
                 className="twin-matrix-val"
                 style={{
                   color:
-                    Math.abs(activePoint.calculated.cht_residual_c) > 15
-                      ? 'var(--color-critical)'
-                      : Math.abs(activePoint.calculated.cht_residual_c) > 10
+                    Math.abs(activePoint.calculated.cht_residual_c) >=
+                    RESIDUAL_ALERT_THRESHOLDS.cht_c
                       ? 'var(--color-caution)'
                       : 'var(--text-primary)',
                 }}
@@ -552,7 +553,16 @@ export const EngineDigitalTwinScreen: React.FC<EngineDigitalTwinScreenProps> = (
             </div>
             <div className="twin-matrix-row">
               <span className="twin-matrix-label">ΔEGT Residual:</span>
-              <span className="twin-matrix-val">
+              <span
+                className="twin-matrix-val"
+                style={{
+                  color:
+                    Math.abs(activePoint.calculated.egt_residual_c) >=
+                    RESIDUAL_ALERT_THRESHOLDS.egt_c
+                      ? 'var(--color-caution)'
+                      : 'var(--text-primary)',
+                }}
+              >
                 {activePoint.calculated.egt_residual_c >= 0 ? '+' : ''}
                 {activePoint.calculated.egt_residual_c.toFixed(2)} °C
               </span>
@@ -563,7 +573,8 @@ export const EngineDigitalTwinScreen: React.FC<EngineDigitalTwinScreenProps> = (
                 className="twin-matrix-val"
                 style={{
                   color:
-                    activePoint.calculated.oil_pressure_residual_bar < -0.5
+                    activePoint.calculated.oil_pressure_residual_bar <=
+                    RESIDUAL_ALERT_THRESHOLDS.oil_pressure_bar
                       ? 'var(--color-critical)'
                       : 'var(--text-primary)',
                 }}
@@ -574,7 +585,16 @@ export const EngineDigitalTwinScreen: React.FC<EngineDigitalTwinScreenProps> = (
             </div>
             <div className="twin-matrix-row">
               <span className="twin-matrix-label">ΔOil Temp:</span>
-              <span className="twin-matrix-val">
+              <span
+                className="twin-matrix-val"
+                style={{
+                  color:
+                    Math.abs(activePoint.calculated.oil_temp_residual_c) >=
+                    RESIDUAL_ALERT_THRESHOLDS.oil_temp_c
+                      ? 'var(--color-caution)'
+                      : 'var(--text-primary)',
+                }}
+              >
                 {activePoint.calculated.oil_temp_residual_c >= 0 ? '+' : ''}
                 {activePoint.calculated.oil_temp_residual_c.toFixed(2)} °C
               </span>
@@ -585,7 +605,8 @@ export const EngineDigitalTwinScreen: React.FC<EngineDigitalTwinScreenProps> = (
                 className="twin-matrix-val"
                 style={{
                   color:
-                    activePoint.calculated.vibration_residual_mms > 1.2
+                    activePoint.calculated.vibration_residual_mms >=
+                    RESIDUAL_ALERT_THRESHOLDS.vibration_mms
                       ? 'var(--color-caution)'
                       : 'var(--text-primary)',
                 }}
@@ -596,7 +617,16 @@ export const EngineDigitalTwinScreen: React.FC<EngineDigitalTwinScreenProps> = (
             </div>
             <div className="twin-matrix-row">
               <span className="twin-matrix-label">ΔFuel Flow:</span>
-              <span className="twin-matrix-val">
+              <span
+                className="twin-matrix-val"
+                style={{
+                  color:
+                    Math.abs(activePoint.calculated.fuel_flow_residual_lph) >=
+                    RESIDUAL_ALERT_THRESHOLDS.fuel_flow_lph
+                      ? 'var(--color-caution)'
+                      : 'var(--text-primary)',
+                }}
+              >
                 {activePoint.calculated.fuel_flow_residual_lph >= 0 ? '+' : ''}
                 {activePoint.calculated.fuel_flow_residual_lph.toFixed(2)} L/h
               </span>
@@ -623,62 +653,65 @@ export const EngineDigitalTwinScreen: React.FC<EngineDigitalTwinScreenProps> = (
         </GlassPanel>
 
         {/* COLUMN 4: PREDICTED (ML ENSEMBLE DIAGNOSTICS & RUL) */}
-        <GlassPanel className="twin-matrix-card" style={{ borderTop: '2px solid var(--border-accent)' }}>
-          <div className="twin-matrix-header">
-            <div className="twin-matrix-title" style={{ color: 'var(--cyan)' }}>
-              4. PREDICTED (ML ENSEMBLE)
-            </div>
-            <SeverityBadge
-              severity={
-                activePoint.predicted.is_anomaly
-                  ? activePoint.predicted.health_index < 48
-                    ? 'critical'
-                    : 'warning'
-                  : 'nominal'
-              }
-              customLabel={activePoint.predicted.is_anomaly ? 'ANOMALY' : 'NOMINAL'}
-            />
-          </div>
+        {(() => {
+          const unifiedDiag = extractUnifiedDiagnosis(activePoint);
+          return (
+            <GlassPanel className="twin-matrix-card" style={{ borderTop: '2px solid var(--border-accent)' }}>
+              <div className="twin-matrix-header">
+                <div className="twin-matrix-title" style={{ color: 'var(--cyan)' }}>
+                  4. PREDICTED (ML ENSEMBLE)
+                </div>
+                <SeverityBadge
+                  severity={
+                    unifiedDiag.isAnomaly
+                      ? activePoint.predicted.health_index < 48
+                        ? 'critical'
+                        : 'warning'
+                      : 'nominal'
+                  }
+                  customLabel={unifiedDiag.isAnomaly ? 'ANOMALY' : 'NOMINAL'}
+                />
+              </div>
 
-          <div className="twin-matrix-body">
-            <div className="twin-matrix-row">
-              <span className="twin-matrix-label">Class:</span>
-              <span
-                className="twin-matrix-val"
-                style={{
-                  color:
-                    activePoint.predicted.predicted_fault_class === 'Normal'
-                      ? 'var(--color-nominal)'
-                      : 'var(--cyan)',
-                }}
-              >
-                {activePoint.predicted.predicted_fault_class}
-              </span>
-            </div>
-            <div className="twin-matrix-row">
-              <span className="twin-matrix-label">Confidence:</span>
-              <span className="twin-matrix-val">
-                {(activePoint.predicted.top_probability * 100).toFixed(1)}%
-              </span>
-            </div>
-            <div className="twin-matrix-row">
-              <span className="twin-matrix-label">Certainty:</span>
-              <span className="twin-matrix-val" style={{ fontSize: 10 }}>
-                {activePoint.predicted.diagnosis_certainty_status}
-              </span>
-            </div>
-            <div className="twin-matrix-row">
-              <span className="twin-matrix-label">IsoForest Score:</span>
-              <span className="twin-matrix-val">
-                {activePoint.predicted.anomaly_score.toFixed(3)} (Thr: {activePoint.predicted.anomaly_threshold.toFixed(3)})
-              </span>
-            </div>
-            <div className="twin-matrix-row">
-              <span className="twin-matrix-label">Sensor Status:</span>
-              <span className="twin-matrix-val" style={{ fontSize: 10 }}>
-                {activePoint.predicted.sensor_diagnosis.diagnosis_status}
-              </span>
-            </div>
+              <div className="twin-matrix-body">
+                <div className="twin-matrix-row">
+                  <span className="twin-matrix-label">Class:</span>
+                  <span
+                    className="twin-matrix-val"
+                    style={{
+                      color:
+                        unifiedDiag.faultClass === 'Normal'
+                          ? 'var(--color-nominal)'
+                          : 'var(--cyan)',
+                    }}
+                  >
+                    {unifiedDiag.faultClass}
+                  </span>
+                </div>
+                <div className="twin-matrix-row">
+                  <span className="twin-matrix-label">Confidence:</span>
+                  <span className="twin-matrix-val">
+                    {unifiedDiag.confidencePct}%
+                  </span>
+                </div>
+                <div className="twin-matrix-row">
+                  <span className="twin-matrix-label">Certainty:</span>
+                  <span className="twin-matrix-val" style={{ fontSize: 10 }}>
+                    {unifiedDiag.certainty}
+                  </span>
+                </div>
+                <div className="twin-matrix-row">
+                  <span className="twin-matrix-label">IsoForest Score:</span>
+                  <span className="twin-matrix-val">
+                    {unifiedDiag.anomalyScore.toFixed(3)} (Thr: {unifiedDiag.anomalyThreshold.toFixed(3)})
+                  </span>
+                </div>
+                <div className="twin-matrix-row">
+                  <span className="twin-matrix-label">Sensor Status:</span>
+                  <span className="twin-matrix-val" style={{ fontSize: 10 }}>
+                    {unifiedDiag.sensorStatus}
+                  </span>
+                </div>
             <div className="twin-matrix-row">
               <span className="twin-matrix-label">Health Index:</span>
               <span className="twin-matrix-val" style={{ color: 'var(--cyan)' }}>
@@ -708,10 +741,12 @@ export const EngineDigitalTwinScreen: React.FC<EngineDigitalTwinScreenProps> = (
             )}
           </div>
 
-          <div className="twin-matrix-footer">
-            Model: {activePoint.predicted.model_version}
-          </div>
-        </GlassPanel>
+              <div className="twin-matrix-footer">
+                Model: {activePoint.predicted.model_version}
+              </div>
+            </GlassPanel>
+          );
+        })()}
       </div>
 
       {/* 6. SYNCHRONIZED ACTUAL VS PHYSICS-EXPECTED CHARTS */}

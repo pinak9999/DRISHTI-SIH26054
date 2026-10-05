@@ -1,4 +1,5 @@
 import {
+  EngineRecord,
   ExplainableAlert,
   FaultScenarioConfig,
   FleetOverview,
@@ -11,7 +12,7 @@ import {
 // 2. If running in browser on localhost/127.0.0.1 -> local FastAPI port 8000
 // 3. Otherwise (e.g. deployed on Vercel) -> live Render production backend
 export const API_BASE =
-  (import.meta as any).env?.VITE_API_BASE_URL ||
+  import.meta.env?.VITE_API_BASE_URL ||
   (typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1')
@@ -49,9 +50,9 @@ async function requestJson<T>(
       throw new Error(detail);
     }
     return (await res.json()) as T;
-  } catch (err: any) {
+  } catch (err: unknown) {
     clearTimeout(timeoutId);
-    if (err.name === 'AbortError') {
+    if (err instanceof Error && err.name === 'AbortError') {
       throw new Error(
         `Request to ${path} timed out after ${timeoutMs / 1000}s. Backend might be cold-starting on Render.`
       );
@@ -62,24 +63,40 @@ async function requestJson<T>(
 
 export const drishtiApi = {
   getBaseUrl: () => API_BASE,
-  getHealth: () => requestJson<Record<string, any>>('/health'),
-  getReadiness: () => requestJson<Record<string, any>>('/ready'),
+  getHealth: () => requestJson<Record<string, unknown>>('/health'),
+  getReadiness: () => requestJson<Record<string, unknown>>('/ready'),
   getHealthPolicy: () =>
-    requestJson<Record<string, any>>('/api/config/health-policy'),
-  updateHealthPolicy: (payload: Record<string, any>) =>
-    requestJson<{ status: string; health_policy: Record<string, any> }>(
+    requestJson<Record<string, unknown>>('/api/config/health-policy'),
+  updateHealthPolicy: (payload: Record<string, unknown>) =>
+    requestJson<{
+      status: string;
+      health_policy: {
+        weights: {
+          thermal_penalty_weight: number;
+          oil_penalty_weight: number;
+          vibration_penalty_weight: number;
+          anomaly_penalty_weight: number;
+        };
+        readiness_thresholds: {
+          go_min_health_index: number;
+          precaution_min_health_index: number;
+          go_min_rul_hours?: number;
+          precaution_min_rul_hours?: number;
+        };
+      };
+    }>(
       '/api/config/health-policy',
       {
         method: 'PUT',
         body: JSON.stringify(payload),
       }
     ),
-  getModelStatus: () => requestJson<Record<string, any>>('/api/model-status'),
+  getModelStatus: () => requestJson<Record<string, unknown>>('/api/model-status'),
   retrainModels: (baseSeed = 1000) =>
-    requestJson<Record<string, any>>(`/api/model-retrain?base_seed=${baseSeed}`, {
+    requestJson<Record<string, unknown>>(`/api/model-retrain?base_seed=${baseSeed}`, {
       method: 'POST',
     }),
-  getCatalog: () => requestJson<Record<string, any>>('/api/catalog'),
+  getCatalog: () => requestJson<Record<string, unknown>>('/api/catalog'),
   getFleet: () => requestJson<FleetOverview>('/api/fleet'),
   seedFleet: () =>
     requestJson<{ status: string; fleet: FleetOverview }>('/api/fleet/seed', {
@@ -87,14 +104,14 @@ export const drishtiApi = {
     }),
   getEngineDetail: (engineId: string) =>
     requestJson<{
-      engine: any;
+      engine: EngineRecord;
       latest_state: FourValueDigitalTwinState | null;
       telemetry_count: number;
       alerts: ExplainableAlert[];
-      physics_metadata: Record<string, any>;
+      physics_metadata: Record<string, unknown>;
     }>(`/api/engines/${encodeURIComponent(engineId)}`),
   getEngineParameterGroups: (engineId: string) =>
-    requestJson<Record<string, any>>(
+    requestJson<Record<string, unknown>>(
       `/api/engines/${encodeURIComponent(engineId)}/parameter-groups`
     ),
   getEngineTelemetry: (engineId: string, missionId?: string, limit = 150) => {
@@ -108,7 +125,7 @@ export const drishtiApi = {
     }>(`/api/engines/${encodeURIComponent(engineId)}/telemetry?${q.toString()}`);
   },
   getEngineHealth: (engineId: string) =>
-    requestJson<Record<string, any>>(
+    requestJson<Record<string, unknown>>(
       `/api/engines/${encodeURIComponent(engineId)}/health`
     ),
   getEngineAlerts: (engineId: string) =>
@@ -121,7 +138,7 @@ export const drishtiApi = {
       { method: 'POST' }
     ),
   runSimulation: (cfg: FaultScenarioConfig) =>
-    requestJson<Record<string, any>>('/api/simulations', {
+    requestJson<Record<string, unknown>>('/api/simulations', {
       method: 'POST',
       body: JSON.stringify(cfg),
     }),
@@ -131,7 +148,10 @@ export const drishtiApi = {
     mission_id: string;
     title: string;
   }) =>
-    requestJson<Record<string, any>>('/api/telemetry/ingest-csv', {
+    requestJson<{
+      mission: { mission_id: string };
+      summary: { total_frames: number; final_predicted_class: string };
+    }>('/api/telemetry/ingest-csv', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
@@ -163,11 +183,11 @@ export const drishtiApi = {
     }),
   getReplayStatus: () => requestJson<ReplaySnapshot>('/api/replay/status'),
   listMissions: () =>
-    requestJson<{ total: number; items: Record<string, any>[] }>('/api/missions'),
+    requestJson<{ total: number; items: Record<string, unknown>[] }>('/api/missions'),
   listReports: () =>
-    requestJson<{ total: number; items: Record<string, any>[] }>('/api/reports'),
+    requestJson<{ total: number; items: Record<string, unknown>[] }>('/api/reports'),
   getReport: (reportId: string) =>
-    requestJson<Record<string, any>>(
+    requestJson<Record<string, unknown>>(
       `/api/reports/${encodeURIComponent(reportId)}`
     ),
   getWebSocketUrl: (engineId: string) => {
