@@ -115,20 +115,20 @@ class DrishtiMLPipeline:
 
     def _fast_predict_proba(self, x_f32: np.ndarray) -> np.ndarray:
         if self._rf_trees:
-            p = np.mean([t.predict(x_f32)[0] for t in self._rf_trees], axis=0)
-            s = float(np.sum(p))
-            return p / s if s > 0 else p
+            out = np.zeros(len(self.classifier.classes_) if self.classifier is not None else 9, dtype=np.float64)
+            for t in self._rf_trees:
+                out += t.predict(x_f32)[0]
+            s = float(np.sum(out))
+            return (out / s) if s > 0 else out
         assert self.classifier is not None
         return self.classifier.predict_proba(x_f32)[0]
 
     def _fast_decision_function(self, x_iso_f32: np.ndarray) -> float:
         if self._if_trees and self._if_d_arr is not None and self._if_a_arr is not None:
-            tot = sum(
-                self._if_d_arr[i][t.apply(x_iso_f32)[0]]
-                + self._if_a_arr[i][t.apply(x_iso_f32)[0]]
-                - 1.0
-                for i, t in enumerate(self._if_trees)
-            )
+            tot = 0.0
+            for i, t in enumerate(self._if_trees):
+                node_id = t.apply(x_iso_f32)[0]
+                tot += self._if_d_arr[i][node_id] + self._if_a_arr[i][node_id] - 1.0
             return float(-(2.0 ** (-tot / self._if_denom)) - self._if_offset)
         assert self.anomaly_detector is not None
         return float(self.anomaly_detector.decision_function(x_iso_f32)[0])

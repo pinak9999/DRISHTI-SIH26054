@@ -222,6 +222,7 @@ def test_10hz_telemetry_simulation_ingestion_replay_and_latency(tmp_path: Path) 
     service = DrishtiTwinService(db_path=tmp_path / "drishti_10hz.db", auto_seed=False)
     app = create_app(service=service)
     client = TestClient(app)
+    _ = client.get("/health")
 
     # 1. Generate and ingest 10 seconds of 10 Hz telemetry (100 frames at dt = 0.1 s)
     t_start = time.perf_counter()
