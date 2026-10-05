@@ -723,7 +723,7 @@ const ProceduralAeroEngineScene: React.FC<{
             <div
               onClick={() => onSelectSubsystem('cylinder_heads_valves')}
               style={{
-                background: 'rgba(6, 9, 17, 0.88)',
+                background: 'rgba(6, 9, 17, 0.92)',
                 border: `1px solid ${
                   subsystemStates.cylinder_heads_valves.status === 'CRITICAL'
                     ? '#ef4444'
@@ -732,17 +732,22 @@ const ProceduralAeroEngineScene: React.FC<{
                     : '#38bdf8'
                 }`,
                 color: '#f1f5f9',
-                padding: '2px 6px',
-                borderRadius: 3,
+                padding: '3px 7px',
+                borderRadius: 4,
                 fontSize: 10,
                 fontFamily: 'monospace',
                 whiteSpace: 'nowrap',
                 cursor: 'pointer',
               }}
             >
-              CHT: {twinState?.actual.cht_c.toFixed(1)}°C (Δ
-              {twinState && twinState.calculated.cht_residual_c >= 0 ? '+' : ''}
-              {twinState?.calculated.cht_residual_c.toFixed(1)}°C)
+              <div style={{ fontSize: 8.5, color: '#94a3b8', fontStyle: 'italic', marginBottom: 2 }}>
+                Inferred from lumped telemetry - not sensor-localized
+              </div>
+              <div>
+                CHT: {twinState?.actual.cht_c.toFixed(1)}°C (Δ
+                {twinState && twinState.calculated.cht_residual_c >= 0 ? '+' : ''}
+                {twinState?.calculated.cht_residual_c.toFixed(1)}°C)
+              </div>
             </div>
           </Html>
 
@@ -750,7 +755,7 @@ const ProceduralAeroEngineScene: React.FC<{
             <div
               onClick={() => onSelectSubsystem('lubrication_system')}
               style={{
-                background: 'rgba(6, 9, 17, 0.88)',
+                background: 'rgba(6, 9, 17, 0.92)',
                 border: `1px solid ${
                   subsystemStates.lubrication_system.status === 'CRITICAL'
                     ? '#ef4444'
@@ -759,16 +764,21 @@ const ProceduralAeroEngineScene: React.FC<{
                     : '#10b981'
                 }`,
                 color: '#f1f5f9',
-                padding: '2px 6px',
-                borderRadius: 3,
+                padding: '3px 7px',
+                borderRadius: 4,
                 fontSize: 10,
                 fontFamily: 'monospace',
                 whiteSpace: 'nowrap',
                 cursor: 'pointer',
               }}
             >
-              OIL: {twinState?.actual.oil_pressure_bar.toFixed(2)} bar |{' '}
-              {twinState?.actual.oil_temp_c.toFixed(1)}°C
+              <div style={{ fontSize: 8.5, color: '#94a3b8', fontStyle: 'italic', marginBottom: 2 }}>
+                Inferred from lumped telemetry - not sensor-localized
+              </div>
+              <div>
+                OIL: {twinState?.actual.oil_pressure_bar.toFixed(2)} bar |{' '}
+                {twinState?.actual.oil_temp_c.toFixed(1)}°C
+              </div>
             </div>
           </Html>
 
@@ -776,23 +786,28 @@ const ProceduralAeroEngineScene: React.FC<{
             <div
               onClick={() => onSelectSubsystem('exhaust_turbo_unit')}
               style={{
-                background: 'rgba(6, 9, 17, 0.88)',
+                background: 'rgba(6, 9, 17, 0.92)',
                 border: `1px solid ${
                   subsystemStates.exhaust_turbo_unit.status !== 'NOMINAL'
                     ? '#f59e0b'
                     : '#64748b'
                 }`,
                 color: '#f1f5f9',
-                padding: '2px 6px',
-                borderRadius: 3,
+                padding: '3px 7px',
+                borderRadius: 4,
                 fontSize: 10,
                 fontFamily: 'monospace',
                 whiteSpace: 'nowrap',
                 cursor: 'pointer',
               }}
             >
-              EGT: {twinState?.actual.egt_c.toFixed(0)}°C | σ=
-              {twinState?.expected.air_density_ratio.toFixed(2)}
+              <div style={{ fontSize: 8.5, color: '#94a3b8', fontStyle: 'italic', marginBottom: 2 }}>
+                Inferred from lumped telemetry - not sensor-localized
+              </div>
+              <div>
+                EGT: {twinState?.actual.egt_c.toFixed(0)}°C | σ=
+                {twinState?.expected.air_density_ratio.toFixed(2)}
+              </div>
             </div>
           </Html>
         </>
@@ -1205,8 +1220,13 @@ export const Engine3DViewport: React.FC<{
             paddingTop: 6,
           }}
         >
-          MODEL DISCLOSURE: Simplified procedural 4-cylinder boxer turbo
-          geometry. Not dimensionally certified Rotax CAD.
+          <div style={{ color: 'var(--cyan)', marginBottom: 2 }}>
+            Subsystem status is inferred from lumped engine residuals.
+          </div>
+          <div>
+            MODEL DISCLOSURE: Simplified procedural 4-cylinder boxer turbo
+            geometry. Not dimensionally certified Rotax CAD.
+          </div>
         </div>
       </div>
 
@@ -1432,6 +1452,9 @@ export const Engine3DViewport: React.FC<{
           <div>
             <div className="kpi-label" style={{ marginTop: 4 }}>
               Synchronized 4-Value Telemetry Comparison
+              <span style={{ fontSize: 9.5, color: '#94a3b8', fontWeight: 400, marginLeft: 6 }}>
+                (ΔRes colors: UI display bands [indicative])
+              </span>
             </div>
             <table className="eng-table mono" style={{ fontSize: 11 }}>
               <thead>

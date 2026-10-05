@@ -38,14 +38,14 @@ import {
   FleetCommandCenterScreen,
   TelemetryExplorerScreen,
 } from './screens/FleetAndTwinScreens';
+import { FaultInvestigationScreen } from './screens/faults/FaultInvestigationScreen';
 import {
-  FaultInvestigationScreen,
   HistoricalMissionReplayScreen,
   MissionSimulatorScreen,
 } from './screens/DiagnosticsAndSimScreens';
+import { PredictiveMaintenanceRulScreen } from './screens/rul/PredictiveMaintenanceRulScreen';
 import {
   ModelEvaluationScreen,
-  PredictiveMaintenanceRulScreen,
   ReportsAndSettingsScreen,
   SystemStatusAndTechDocsScreen,
 } from './screens/RulEvalAndReportsScreens';
@@ -583,6 +583,7 @@ export const App: React.FC = () => {
                 latestState={latestState}
                 alerts={engineAlerts}
                 catalog={catalog}
+                backendError={errorBanner}
                 onRefreshEngine={async () => {
                   await loadEngineData(selectedEngineId);
                   await loadGlobalData();
@@ -603,7 +604,14 @@ export const App: React.FC = () => {
             )}
 
             {activeScreen === 'rul' && (
-              <PredictiveMaintenanceRulScreen engineId={selectedEngineId} />
+              <PredictiveMaintenanceRulScreen
+                engineId={selectedEngineId}
+                backendError={errorBanner}
+                onRefresh={async () => {
+                  await loadEngineData(selectedEngineId);
+                  await loadGlobalData();
+                }}
+              />
             )}
 
             {activeScreen === 'evaluation' && (

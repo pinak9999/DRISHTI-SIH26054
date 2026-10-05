@@ -528,6 +528,9 @@ export const EngineDigitalTwinScreen: React.FC<EngineDigitalTwinScreenProps> = (
             </div>
             <StatusChip status="info" label="DETERMINISTIC" />
           </div>
+          <div className="mono" style={{ fontSize: 9.5, color: 'var(--text-muted)', marginBottom: 6, fontStyle: 'italic' }}>
+            Highlights: UI display bands (indicative; backend alert defaults in alert_engine.py)
+          </div>
 
           <div className="twin-matrix-body">
             <div className="twin-matrix-row">

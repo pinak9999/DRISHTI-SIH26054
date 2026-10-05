@@ -263,7 +263,7 @@ export const FleetCommandCenterScreen: React.FC<FleetCommandCenterScreenProps> =
           value={qualityScore}
           unit="%"
           precision={1}
-          subtext={`${selectedEngineId} · ${isCanValid ? 'Clean CAN · Isochronous 10 Hz' : 'Degraded Frames Detected'}`}
+          subtext={`${selectedEngineId} · ${latestState?.data_source || (activeEngine?.is_synthetic ? 'SYNTHETIC' : 'LIVE')} · Q=${qualityScore.toFixed(1)}%`}
           status={isCanValid ? 'nominal' : 'caution'}
           icon={<Wifi size={18} />}
         />
