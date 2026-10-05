@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+import json
 from pathlib import Path
+import sys
 from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
@@ -41,6 +44,20 @@ class CSVIngestRequest(BaseModel):
 
 
 def create_app(service: Optional[DrishtiTwinService] = None) -> FastAPI:
+    twin_service = service or DrishtiTwinService(auto_seed=True)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        task = None
+        if "pytest" not in sys.modules:
+            task = asyncio.create_task(twin_service.run_continuous_simulation(interval_sec=1.0))
+        try:
+            yield
+        finally:
+            twin_service.stop_continuous_simulation()
+            if task is not None:
+                task.cancel()
+
     app = FastAPI(
         title="DRISHTI — AI-Enabled Aero Piston Engine Digital Twin API",
         description=(
@@ -49,6 +66,7 @@ def create_app(service: Optional[DrishtiTwinService] = None) -> FastAPI:
             "Remaining Useful Life Estimation, and Explainable Maintenance Advisory."
         ),
         version="1.0.0",
+        lifespan=lifespan,
     )
 
     app.add_middleware(
@@ -59,7 +77,6 @@ def create_app(service: Optional[DrishtiTwinService] = None) -> FastAPI:
         allow_headers=["*"],
     )
 
-    twin_service = service or DrishtiTwinService(auto_seed=True)
     app.state.twin_service = twin_service
 
     @app.get("/health", tags=["System"])
@@ -386,38 +403,96 @@ def create_app(service: Optional[DrishtiTwinService] = None) -> FastAPI:
     ) -> None:
         await websocket.accept()
         svc: DrishtiTwinService = app.state.twin_service
-        try:
-            eng = svc.db.get_engine(engine_id)
-            if not eng:
-                await websocket.send_json(
-                    {"type": "error", "message": f"Engine '{engine_id}' not found."}
-                )
-                await websocket.close()
-                return
+        current_eng_id = engine_id
+        queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue(maxsize=100)
 
-            telem = svc.db.get_engine_telemetry(
-                engine_id, eng["active_mission_id"], limit=500
-            )
-            alerts = svc.db.get_engine_alerts(
-                engine_id, eng["active_mission_id"], limit=500
-            )
-            alert_by_seq = {int(a["sequence_number"]): a for a in alerts}
-            items = telem["items"]
-
-            for st in items:
-                seq = int(st["sequence_number"])
+        def listener(twin_state: Any, alert: Any) -> None:
+            if twin_state.engine_id == current_eng_id:
                 payload = {
                     "type": "telemetry_frame",
-                    "engine_id": engine_id,
-                    "mission_id": eng["active_mission_id"],
-                    "sequence_number": seq,
-                    "twin_state": st,
-                    "alert": alert_by_seq.get(seq),
+                    "engine_id": current_eng_id,
+                    "mission_id": twin_state.mission_id,
+                    "sequence_number": twin_state.sequence_number,
+                    "twin_state": twin_state.model_dump(),
+                    "alert": alert.model_dump() if alert else None,
                 }
-                await websocket.send_json(payload)
-                await asyncio.sleep(0.05)
+                try:
+                    queue.put_nowait(payload)
+                except asyncio.QueueFull:
+                    pass
+
+        svc.subscribe_telemetry(listener)
+
+        try:
+            # 1. Send immediate latest state so UI displays immediately without waiting for next tick
+            eng = svc.db.get_engine(current_eng_id)
+            if eng:
+                telem = svc.db.get_engine_telemetry(
+                    current_eng_id, eng["active_mission_id"], limit=1
+                )
+                alerts = svc.db.get_engine_alerts(
+                    current_eng_id, eng["active_mission_id"], limit=1
+                )
+                if telem["items"]:
+                    await websocket.send_json(
+                        {
+                            "type": "telemetry_frame",
+                            "engine_id": current_eng_id,
+                            "mission_id": eng["active_mission_id"],
+                            "sequence_number": telem["items"][-1]["sequence_number"],
+                            "twin_state": telem["items"][-1],
+                            "alert": alerts[0] if alerts else None,
+                        }
+                    )
+
+            # 2. Concurrently read incoming client control messages and pump telemetry frames
+            async def receive_loop() -> None:
+                nonlocal current_eng_id
+                while True:
+                    text = await websocket.receive_text()
+                    try:
+                        msg = json.loads(text)
+                        if msg.get("type") == "select_engine" and msg.get("engine_id"):
+                            current_eng_id = str(msg["engine_id"])
+                            eng_new = svc.db.get_engine(current_eng_id)
+                            if eng_new:
+                                t_new = svc.db.get_engine_telemetry(
+                                    current_eng_id, eng_new["active_mission_id"], limit=1
+                                )
+                                a_new = svc.db.get_engine_alerts(
+                                    current_eng_id, eng_new["active_mission_id"], limit=1
+                                )
+                                if t_new["items"]:
+                                    await websocket.send_json(
+                                        {
+                                            "type": "telemetry_frame",
+                                            "engine_id": current_eng_id,
+                                            "mission_id": eng_new["active_mission_id"],
+                                            "sequence_number": t_new["items"][-1]["sequence_number"],
+                                            "twin_state": t_new["items"][-1],
+                                            "alert": a_new[0] if a_new else None,
+                                        }
+                                    )
+                    except Exception:
+                        pass
+
+            async def send_loop() -> None:
+                while True:
+                    payload = await queue.get()
+                    await websocket.send_json(payload)
+
+            recv_task = asyncio.create_task(receive_loop())
+            send_task = asyncio.create_task(send_loop())
+            done, pending = await asyncio.wait(
+                [recv_task, send_task], return_when=asyncio.FIRST_COMPLETED
+            )
+            for t in pending:
+                t.cancel()
+
         except WebSocketDisconnect:
-            return
+            pass
+        finally:
+            svc.unsubscribe_telemetry(listener)
 
     dist_dir = Path(__file__).resolve().parents[2] / "frontend" / "dist"
     if dist_dir.exists():

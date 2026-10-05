@@ -331,6 +331,195 @@ class DeterministicFaultSimulator:
             "ambient_temp_c": round(ambient_temp_c, 2),
         }
 
+    def generate_frame_at_step(
+        self,
+        cfg: FaultScenarioConfig,
+        step: int,
+        rng: Optional[np.random.Generator] = None,
+        custom_timestamp_iso: Optional[str] = None,
+        stuck_value_cache: Optional[float] = None,
+    ) -> TelemetryInputFrame:
+        if rng is None:
+            rng = np.random.default_rng(cfg.random_seed + step)
+
+        t_sec = round(step * cfg.sample_interval_sec, 3)
+        if custom_timestamp_iso:
+            ts_iso = custom_timestamp_iso
+        else:
+            start_dt = datetime.fromisoformat(cfg.start_timestamp_iso.replace("Z", "+00:00"))
+            dt_point = (start_dt + timedelta(seconds=t_sec)).astimezone(timezone.utc)
+            if cfg.sample_interval_sec < 1.0 or abs(t_sec - round(t_sec)) > 1e-6:
+                ts_iso = dt_point.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            else:
+                ts_iso = dt_point.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        op = self._compute_operating_point(
+            cfg.mission_profile, t_sec, cfg.duration_sec, cfg, rng
+        )
+
+        dummy_validated = ValidatedTelemetryFrame(
+            engine_id=cfg.engine_id,
+            mission_id=cfg.mission_id,
+            timestamp=ts_iso,
+            sequence_number=step,
+            mission_elapsed_sec=t_sec,
+            rpm=op["rpm"],
+            cht_c=175.0,
+            egt_c=800.0,
+            oil_pressure_bar=4.1,
+            oil_temp_c=98.0,
+            fuel_flow_lph=21.0,
+            vibration_rms_mms=2.2,
+            throttle_pct=op["throttle_pct"],
+            engine_load_pct=op["engine_load_pct"],
+            altitude_m=op["altitude_m"],
+            ambient_temp_c=op["ambient_temp_c"],
+            battery_voltage_v=13.8,
+            alternator_current_a=18.5,
+            injection_pulse_ms=8.2,
+            ignition_advance_deg=26.0,
+            data_source=DataSourceType.SIMULATOR,
+            is_synthetic=True,
+            quality={"is_valid": True, "quality_score": 1.0},  # type: ignore[arg-type]
+        )
+        exp = self.ref_model.estimate_expected(dummy_validated)
+
+        # Baseline measurements = expected + small bounded Gaussian noise
+        rpm: Optional[float] = op["rpm"]
+        cht_c: Optional[float] = exp.cht_c + float(rng.normal(0.0, 1.15))
+        egt_c: Optional[float] = exp.egt_c + float(rng.normal(0.0, 3.80))
+        oil_pressure_bar: Optional[float] = exp.oil_pressure_bar + float(rng.normal(0.0, 0.045))
+        oil_temp_c: Optional[float] = exp.oil_temp_c + float(rng.normal(0.0, 0.85))
+        fuel_flow_lph: Optional[float] = exp.fuel_flow_lph + float(rng.normal(0.0, 0.28))
+        vibration_rms_mms: Optional[float] = exp.vibration_rms_mms + float(rng.normal(0.0, 0.09))
+        battery_voltage_v = exp.battery_voltage_v + float(rng.normal(0.0, 0.04))
+        alternator_current_a = 16.0 + 0.06 * op["engine_load_pct"] + float(rng.normal(0.0, 0.3))
+        injection_pulse_ms: Optional[float] = exp.injection_pulse_ms + float(rng.normal(0.0, 0.08))
+        ignition_advance_deg = exp.ignition_advance_deg + float(rng.normal(0.0, 0.15))
+
+        active_label = "Normal"
+        active_sev = 0.0
+
+        if cfg.fault_class != "Normal" and t_sec >= cfg.onset_time_sec:
+            active_label = cfg.fault_class
+            ramp_window = max(6.0, min(25.0, cfg.duration_sec * 0.20))
+            prog = min(1.0, (t_sec - cfg.onset_time_sec) / ramp_window)
+            p = 0.45 + 0.55 * prog
+            s = max(0.25, cfg.severity)
+            active_sev = round(s * p, 3)
+
+            if cfg.fault_class == "Cylinder Overheating":
+                assert cht_c is not None and oil_temp_c is not None and egt_c is not None and rpm is not None
+                cht_c += (24.0 + 38.0 * s) * p
+                oil_temp_c += (10.0 + 18.0 * s) * p
+                egt_c += (18.0 + 30.0 * s) * p
+                rpm -= 55.0 * s * p
+            elif cfg.fault_class == "Oil Pressure Drop":
+                assert oil_pressure_bar is not None and oil_temp_c is not None and vibration_rms_mms is not None
+                oil_pressure_bar -= (1.15 + 1.55 * s) * p
+                oil_temp_c += (12.0 + 22.0 * s) * p
+                vibration_rms_mms += (0.75 + 1.15 * s) * p
+            elif cfg.fault_class == "Crankshaft Bearing Wear":
+                assert vibration_rms_mms is not None and oil_pressure_bar is not None and oil_temp_c is not None
+                vibration_rms_mms += (2.70 + 4.60 * s) * p
+                oil_pressure_bar -= (0.48 + 0.62 * s) * p
+                oil_temp_c += (9.0 + 15.0 * s) * p
+            elif cfg.fault_class == "Cylinder Misfire":
+                assert egt_c is not None and rpm is not None and vibration_rms_mms is not None and cht_c is not None
+                egt_c -= (58.0 + 84.0 * s) * p
+                rpm -= (145.0 + 210.0 * s) * p
+                vibration_rms_mms += (2.25 + 3.50 * s) * p
+                cht_c -= (14.0 + 22.0 * s) * p
+            elif cfg.fault_class == "Piston Ring Wear":
+                assert oil_temp_c is not None and cht_c is not None and fuel_flow_lph is not None and vibration_rms_mms is not None and oil_pressure_bar is not None
+                oil_temp_c += (15.0 + 24.0 * s) * p
+                cht_c += (13.0 + 20.0 * s) * p
+                fuel_flow_lph += (2.5 + 3.8 * s) * p
+                vibration_rms_mms += (1.15 + 1.75 * s) * p
+                oil_pressure_bar -= (0.35 + 0.50 * s) * p
+            elif cfg.fault_class == "Valve Clearance Issue":
+                assert egt_c is not None and vibration_rms_mms is not None and cht_c is not None and fuel_flow_lph is not None
+                egt_c += (48.0 + 74.0 * s) * p
+                vibration_rms_mms += (1.45 + 2.25 * s) * p
+                cht_c += (6.0 + 12.0 * s) * p
+                fuel_flow_lph -= (1.2 + 1.8 * s) * p
+            elif cfg.fault_class == "Fuel Injector Clogging":
+                assert fuel_flow_lph is not None and injection_pulse_ms is not None and egt_c is not None and vibration_rms_mms is not None
+                fuel_flow_lph -= (3.3 + 5.0 * s) * p
+                injection_pulse_ms += (1.45 + 2.35 * s) * p
+                egt_c += (40.0 + 65.0 * s) * p
+                vibration_rms_mms += (0.90 + 1.45 * s) * p
+            elif cfg.fault_class == "Sensor Fault":
+                target_ch = cfg.sensor_fault_channel
+                submode = cfg.sensor_fault_submode
+                ch_map = {
+                    "cht_c": cht_c or 175.0,
+                    "egt_c": egt_c or 800.0,
+                    "oil_pressure_bar": oil_pressure_bar or 4.1,
+                    "vibration_rms_mms": vibration_rms_mms or 2.2,
+                }
+                base_v = ch_map.get(target_ch, cht_c or 175.0)
+                if submode == "stuck_at":
+                    if stuck_value_cache is None:
+                        stuck_value_cache = round(base_v, 2)
+                    corrupted_val: Optional[float] = stuck_value_cache
+                elif submode == "drift":
+                    if target_ch == "cht_c":
+                        corrupted_val = base_v + (38.0 + 45.0 * s) * p
+                    elif target_ch == "egt_c":
+                        corrupted_val = base_v + (115.0 + 130.0 * s) * p
+                    elif target_ch == "oil_pressure_bar":
+                        corrupted_val = max(0.2, base_v - (1.8 + 1.5 * s) * p)
+                    else:
+                        corrupted_val = base_v + (4.5 + 5.0 * s) * p
+                elif submode == "high_noise":
+                    corrupted_val = base_v + float(rng.normal(0.0, 35.0 if target_ch != "oil_pressure_bar" else 1.8))
+                elif submode == "missing_samples":
+                    corrupted_val = None
+                else:  # implausible_values
+                    corrupted_val = 485.0 if target_ch == "cht_c" else (-15.0 if target_ch == "oil_pressure_bar" else 1650.0)
+
+                if target_ch == "cht_c":
+                    cht_c = corrupted_val
+                elif target_ch == "egt_c":
+                    egt_c = corrupted_val
+                elif target_ch == "oil_pressure_bar":
+                    oil_pressure_bar = corrupted_val
+                elif target_ch == "vibration_rms_mms":
+                    vibration_rms_mms = corrupted_val
+
+        return TelemetryInputFrame(
+            engine_id=cfg.engine_id,
+            mission_id=cfg.mission_id,
+            timestamp=ts_iso,
+            sequence_number=step,
+            mission_elapsed_sec=t_sec,
+            rpm=round(rpm, 1) if rpm is not None else None,
+            cht_c=round(cht_c, 2) if cht_c is not None else None,
+            egt_c=round(egt_c, 2) if egt_c is not None else None,
+            oil_pressure_bar=round(max(0.05, oil_pressure_bar), 3)
+            if oil_pressure_bar is not None and oil_pressure_bar > -5.0
+            else oil_pressure_bar,
+            oil_temp_c=round(oil_temp_c, 2) if oil_temp_c is not None else None,
+            fuel_flow_lph=round(max(1.0, fuel_flow_lph), 2) if fuel_flow_lph is not None else None,
+            vibration_rms_mms=round(max(0.1, vibration_rms_mms), 3)
+            if vibration_rms_mms is not None
+            else None,
+            throttle_pct=op["throttle_pct"],
+            engine_load_pct=op["engine_load_pct"],
+            altitude_m=op["altitude_m"],
+            ambient_temp_c=op["ambient_temp_c"],
+            battery_voltage_v=round(battery_voltage_v, 2),
+            alternator_current_a=round(alternator_current_a, 2),
+            injection_pulse_ms=round(injection_pulse_ms, 2) if injection_pulse_ms is not None else None,
+            ignition_advance_deg=round(ignition_advance_deg, 2),
+            data_source=DataSourceType.SIMULATOR,
+            is_synthetic=True,
+            scenario_label=active_label,
+            fault_severity=active_sev,
+            seed=cfg.random_seed,
+        )
+
     def generate_scenario(self, cfg: FaultScenarioConfig) -> List[TelemetryInputFrame]:
         if cfg.fault_class not in NINE_FAULT_CLASSES:
             raise ValueError(
@@ -339,181 +528,25 @@ class DeterministicFaultSimulator:
 
         rng = np.random.default_rng(cfg.random_seed)
         num_steps = max(1, int(round(cfg.duration_sec / cfg.sample_interval_sec)))
-        start_dt = datetime.fromisoformat(cfg.start_timestamp_iso.replace("Z", "+00:00"))
 
         frames: List[TelemetryInputFrame] = []
         stuck_value_cache: Optional[float] = None
 
         for step in range(num_steps):
-            t_sec = round(step * cfg.sample_interval_sec, 3)
-            dt_point = (start_dt + timedelta(seconds=t_sec)).astimezone(timezone.utc)
-            if cfg.sample_interval_sec < 1.0 or abs(t_sec - round(t_sec)) > 1e-6:
-                ts_iso = dt_point.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-            else:
-                ts_iso = dt_point.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-            op = self._compute_operating_point(
-                cfg.mission_profile, t_sec, cfg.duration_sec, cfg, rng
+            frame = self.generate_frame_at_step(
+                cfg=cfg,
+                step=step,
+                rng=rng,
+                stuck_value_cache=stuck_value_cache,
             )
-
-            # Build nominal frame to query physics reference
-            dummy_validated = ValidatedTelemetryFrame(
-                engine_id=cfg.engine_id,
-                mission_id=cfg.mission_id,
-                timestamp=ts_iso,
-                sequence_number=step,
-                mission_elapsed_sec=t_sec,
-                rpm=op["rpm"],
-                cht_c=175.0,
-                egt_c=800.0,
-                oil_pressure_bar=4.1,
-                oil_temp_c=98.0,
-                fuel_flow_lph=21.0,
-                vibration_rms_mms=2.2,
-                throttle_pct=op["throttle_pct"],
-                engine_load_pct=op["engine_load_pct"],
-                altitude_m=op["altitude_m"],
-                ambient_temp_c=op["ambient_temp_c"],
-                battery_voltage_v=13.8,
-                alternator_current_a=18.5,
-                injection_pulse_ms=8.2,
-                ignition_advance_deg=26.0,
-                data_source=DataSourceType.SIMULATOR,
-                is_synthetic=True,
-                quality={"is_valid": True, "quality_score": 1.0},  # type: ignore[arg-type]
-            )
-            exp = self.ref_model.estimate_expected(dummy_validated)
-
-            # Baseline measurements = expected + small bounded Gaussian noise
-            rpm = op["rpm"]
-            cht_c = exp.cht_c + float(rng.normal(0.0, 1.15))
-            egt_c = exp.egt_c + float(rng.normal(0.0, 3.80))
-            oil_pressure_bar = exp.oil_pressure_bar + float(rng.normal(0.0, 0.045))
-            oil_temp_c = exp.oil_temp_c + float(rng.normal(0.0, 0.85))
-            fuel_flow_lph = exp.fuel_flow_lph + float(rng.normal(0.0, 0.28))
-            vibration_rms_mms = exp.vibration_rms_mms + float(rng.normal(0.0, 0.09))
-            battery_voltage_v = exp.battery_voltage_v + float(rng.normal(0.0, 0.04))
-            alternator_current_a = 16.0 + 0.06 * op["engine_load_pct"] + float(rng.normal(0.0, 0.3))
-            injection_pulse_ms = exp.injection_pulse_ms + float(rng.normal(0.0, 0.08))
-            ignition_advance_deg = exp.ignition_advance_deg + float(rng.normal(0.0, 0.15))
-
-            active_label = "Normal"
-            active_sev = 0.0
-
-            if cfg.fault_class != "Normal" and t_sec >= cfg.onset_time_sec:
-                active_label = cfg.fault_class
-                ramp_window = max(6.0, min(25.0, cfg.duration_sec * 0.20))
-                prog = min(1.0, (t_sec - cfg.onset_time_sec) / ramp_window)
-                # Ensure minimum progression of 0.45 right after onset so early fault frames are distinguishable
-                p = 0.45 + 0.55 * prog
-                s = max(0.25, cfg.severity)
-                active_sev = round(s * p, 3)
-
-                if cfg.fault_class == "Cylinder Overheating":
-                    cht_c += (24.0 + 38.0 * s) * p
-                    oil_temp_c += (10.0 + 18.0 * s) * p
-                    egt_c += (18.0 + 30.0 * s) * p
-                    rpm -= 55.0 * s * p
-                elif cfg.fault_class == "Oil Pressure Drop":
-                    oil_pressure_bar -= (1.15 + 1.55 * s) * p
-                    oil_temp_c += (12.0 + 22.0 * s) * p
-                    vibration_rms_mms += (0.75 + 1.15 * s) * p
-                elif cfg.fault_class == "Crankshaft Bearing Wear":
-                    vibration_rms_mms += (2.70 + 4.60 * s) * p
-                    oil_pressure_bar -= (0.48 + 0.62 * s) * p
-                    oil_temp_c += (9.0 + 15.0 * s) * p
-                elif cfg.fault_class == "Cylinder Misfire":
-                    egt_c -= (58.0 + 84.0 * s) * p
-                    rpm -= (145.0 + 210.0 * s) * p
-                    vibration_rms_mms += (2.25 + 3.50 * s) * p
-                    cht_c -= (14.0 + 22.0 * s) * p
-                elif cfg.fault_class == "Piston Ring Wear":
-                    oil_temp_c += (15.0 + 24.0 * s) * p
-                    cht_c += (13.0 + 20.0 * s) * p
-                    fuel_flow_lph += (2.5 + 3.8 * s) * p
-                    vibration_rms_mms += (1.15 + 1.75 * s) * p
-                    oil_pressure_bar -= (0.35 + 0.50 * s) * p
-                elif cfg.fault_class == "Valve Clearance Issue":
-                    egt_c += (48.0 + 74.0 * s) * p
-                    vibration_rms_mms += (1.45 + 2.25 * s) * p
-                    cht_c += (6.0 + 12.0 * s) * p
-                    fuel_flow_lph -= (1.2 + 1.8 * s) * p
-                elif cfg.fault_class == "Fuel Injector Clogging":
-                    fuel_flow_lph -= (3.3 + 5.0 * s) * p
-                    injection_pulse_ms += (1.45 + 2.35 * s) * p
-                    egt_c += (40.0 + 65.0 * s) * p
-                    vibration_rms_mms += (0.90 + 1.45 * s) * p
-                elif cfg.fault_class == "Sensor Fault":
-                    target_ch = cfg.sensor_fault_channel
-                    submode = cfg.sensor_fault_submode
-                    ch_map = {
-                        "cht_c": cht_c,
-                        "egt_c": egt_c,
-                        "oil_pressure_bar": oil_pressure_bar,
-                        "vibration_rms_mms": vibration_rms_mms,
-                    }
-                    base_v = ch_map.get(target_ch, cht_c)
-                    if submode == "stuck_at":
-                        if stuck_value_cache is None:
-                            stuck_value_cache = round(base_v, 2)
-                        corrupted_val: Optional[float] = stuck_value_cache
-                    elif submode == "drift":
-                        if target_ch == "cht_c":
-                            corrupted_val = base_v + (38.0 + 45.0 * s) * p
-                        elif target_ch == "egt_c":
-                            corrupted_val = base_v + (115.0 + 130.0 * s) * p
-                        elif target_ch == "oil_pressure_bar":
-                            corrupted_val = max(0.2, base_v - (1.8 + 1.5 * s) * p)
-                        else:
-                            corrupted_val = base_v + (4.5 + 5.0 * s) * p
-                    elif submode == "high_noise":
-                        corrupted_val = base_v + float(rng.normal(0.0, 35.0 if target_ch != "oil_pressure_bar" else 1.8))
-                    elif submode == "missing_samples":
-                        corrupted_val = None
-                    else:  # implausible_values
-                        corrupted_val = 485.0 if target_ch == "cht_c" else (-15.0 if target_ch == "oil_pressure_bar" else 1650.0)
-
-                    if target_ch == "cht_c":
-                        cht_c = corrupted_val  # type: ignore[assignment]
-                    elif target_ch == "egt_c":
-                        egt_c = corrupted_val  # type: ignore[assignment]
-                    elif target_ch == "oil_pressure_bar":
-                        oil_pressure_bar = corrupted_val  # type: ignore[assignment]
-                    elif target_ch == "vibration_rms_mms":
-                        vibration_rms_mms = corrupted_val  # type: ignore[assignment]
-
-            frames.append(
-                TelemetryInputFrame(
-                    engine_id=cfg.engine_id,
-                    mission_id=cfg.mission_id,
-                    timestamp=ts_iso,
-                    sequence_number=step,
-                    mission_elapsed_sec=t_sec,
-                    rpm=round(rpm, 1) if rpm is not None else None,
-                    cht_c=round(cht_c, 2) if cht_c is not None else None,
-                    egt_c=round(egt_c, 2) if egt_c is not None else None,
-                    oil_pressure_bar=round(max(0.05, oil_pressure_bar), 3)
-                    if oil_pressure_bar is not None and oil_pressure_bar > -5.0
-                    else oil_pressure_bar,
-                    oil_temp_c=round(oil_temp_c, 2) if oil_temp_c is not None else None,
-                    fuel_flow_lph=round(max(1.0, fuel_flow_lph), 2) if fuel_flow_lph is not None else None,
-                    vibration_rms_mms=round(max(0.1, vibration_rms_mms), 3)
-                    if vibration_rms_mms is not None
-                    else None,
-                    throttle_pct=op["throttle_pct"],
-                    engine_load_pct=op["engine_load_pct"],
-                    altitude_m=op["altitude_m"],
-                    ambient_temp_c=op["ambient_temp_c"],
-                    battery_voltage_v=round(battery_voltage_v, 2),
-                    alternator_current_a=round(alternator_current_a, 2),
-                    injection_pulse_ms=round(injection_pulse_ms, 2),
-                    ignition_advance_deg=round(ignition_advance_deg, 2),
-                    data_source=DataSourceType.SIMULATOR,
-                    is_synthetic=True,
-                    scenario_label=active_label,
-                    fault_severity=active_sev,
-                    seed=cfg.random_seed,
-                )
-            )
+            if (
+                cfg.fault_class == "Sensor Fault"
+                and cfg.sensor_fault_submode == "stuck_at"
+                and stuck_value_cache is None
+            ):
+                ch_val = getattr(frame, cfg.sensor_fault_channel, None)
+                if ch_val is not None:
+                    stuck_value_cache = float(ch_val)
+            frames.append(frame)
 
         return frames

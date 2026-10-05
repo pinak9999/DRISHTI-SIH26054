@@ -27,6 +27,7 @@ import {
   WifiOff,
 } from 'lucide-react';
 import { drishtiApi } from './api/client';
+import { useLiveTelemetry } from './hooks/useLiveTelemetry';
 import { UiLabShowcase } from './screens/UiLabShowcase';
 import {
   ExplainableAlert,
@@ -308,16 +309,71 @@ export const App: React.FC = () => {
   const selectedEngineRecord =
     (fleet?.engines || []).find((e) => e.engine_id === selectedEngineId) || null;
 
+  const handleLiveFrame = (frame: FourValueDigitalTwinState, alert?: ExplainableAlert) => {
+    setLatestState(frame);
+    setEngineTelemetry((prev) => {
+      const next = [...prev, frame];
+      return next.length > 200 ? next.slice(next.length - 200) : next;
+    });
+    if (alert) {
+      setEngineAlerts((prev) => [alert, ...prev.filter((a) => a.alert_id !== alert.alert_id)].slice(0, 50));
+    }
+    setFleet((prevFleet) => {
+      if (!prevFleet) return null;
+      const updatedEngines = prevFleet.engines.map((e) => {
+        if (e.engine_id !== frame.engine_id) return e;
+        return {
+          ...e,
+          latest_health_index: frame.predicted.health_index,
+          latest_fault_class: frame.predicted.predicted_fault_class,
+          latest_rul_status: frame.predicted.rul_status,
+          latest_rul_hours: frame.predicted.rul_hours,
+        };
+      });
+      return {
+        ...prevFleet,
+        engines: updatedEngines,
+      };
+    });
+  };
+
+  const {
+    connectionState: wsState,
+    latencyMs: wsLatencyMs,
+  } = useLiveTelemetry({
+    engineId: selectedEngineId,
+    enabled: true,
+    onFrame: handleLiveFrame,
+  });
+
   const apiOnline = backendHealth?.status === 'ok';
-  const apiStatus = !backendHealth
-    ? 'connecting'
-    : apiOnline
-    ? 'online'
-    : 'offline';
+  const statusClass =
+    wsState === 'LIVE'
+      ? 'live'
+      : wsState === 'RECONNECTING'
+      ? 'reconnecting'
+      : wsState === 'CONNECTING'
+      ? 'connecting'
+      : apiOnline
+      ? 'online'
+      : 'offline';
+
+  const dotClass =
+    wsState === 'LIVE'
+      ? 'live'
+      : wsState === 'RECONNECTING'
+      ? 'reconnecting'
+      : wsState === 'CONNECTING'
+      ? 'connecting'
+      : apiOnline
+      ? 'online'
+      : 'offline';
+
   const latencyMs =
     typeof backendHealth?.last_inference_latency_ms === 'number'
       ? backendHealth.last_inference_latency_ms
       : measuredLatency;
+  const latencyDisplay = wsLatencyMs > 0 ? wsLatencyMs : latencyMs;
   const activeAlertCount = fleet?.total_active_alerts ?? (engineAlerts.length || 0);
 
   return (
@@ -356,19 +412,33 @@ export const App: React.FC = () => {
 
         {/* Center Indicators */}
         <div className="topbar-center">
-          {/* API Connectivity */}
-          <div className={`status-pill ${apiOnline ? 'online' : errorBanner ? 'offline' : 'connecting'}`}>
-            <span className={`status-dot ${apiStatus}`} />
+          {/* API / Telemetry Stream Connectivity */}
+          <div className={`status-pill ${statusClass}`}>
+            <span className={`status-dot ${dotClass}`} />
             <span className="mono status-text">
               <span className="status-text-full">
-                {apiOnline
+                {wsState === 'LIVE'
+                  ? `LIVE Stream ${latencyDisplay.toFixed(0)} ms`
+                  : wsState === 'RECONNECTING'
+                  ? 'Reconnecting Live Stream...'
+                  : wsState === 'CONNECTING'
+                  ? 'Connecting Stream...'
+                  : apiOnline
                   ? `API Connected ${latencyMs.toFixed(2)} ms`
                   : errorBanner
                   ? 'API Offline'
-                  : 'Connecting...'}
+                  : 'Stream Standby'}
               </span>
               <span className="status-text-short">
-                {apiOnline ? `${latencyMs.toFixed(0)}ms` : 'Offline'}
+                {wsState === 'LIVE'
+                  ? `LIVE ${latencyDisplay.toFixed(0)}ms`
+                  : wsState === 'RECONNECTING'
+                  ? 'Reconnecting'
+                  : wsState === 'CONNECTING'
+                  ? 'Connecting'
+                  : apiOnline
+                  ? `${latencyMs.toFixed(0)}ms`
+                  : 'Offline'}
               </span>
             </span>
           </div>

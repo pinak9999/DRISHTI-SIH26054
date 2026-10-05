@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
+import numpy as np
 
 from backend.app.alerts.alert_engine import ExplainableAlertEngine
 from backend.app.db.database import DrishtiDatabase
@@ -244,8 +247,104 @@ class DrishtiTwinService:
             self.db.save_config("health_policy", self.health_policy, now_iso)
 
         self.ml_pipeline.load_or_train(force_retrain=False)
+        self._telemetry_listeners: List[Callable[[FourValueDigitalTwinState, Optional[ExplainableAlert]], None]] = []
+        self._continuous_sim_running: bool = False
+        self._fleet_rng = np.random.default_rng(202610)
+        self._fleet_sim_step: Dict[str, int] = {item["engine_id"]: 75 for item in FLEET_DEFINITIONS}
         if auto_seed and len(self.db.list_engines()) == 0:
             self.seed_demo_fleet()
+
+    def subscribe_telemetry(
+        self,
+        listener: Callable[[FourValueDigitalTwinState, Optional[ExplainableAlert]], None],
+    ) -> None:
+        if listener not in self._telemetry_listeners:
+            self._telemetry_listeners.append(listener)
+
+    def unsubscribe_telemetry(
+        self,
+        listener: Callable[[FourValueDigitalTwinState, Optional[ExplainableAlert]], None],
+    ) -> None:
+        if listener in self._telemetry_listeners:
+            self._telemetry_listeners.remove(listener)
+
+    def step_continuous_fleet_frame(
+        self,
+    ) -> List[Tuple[FourValueDigitalTwinState, Optional[ExplainableAlert]]]:
+        """Advance all 6 fleet engines by 1 telemetry sample and broadcast to subscribers."""
+        results: List[Tuple[FourValueDigitalTwinState, Optional[ExplainableAlert]]] = []
+        now_dt = datetime.now(timezone.utc)
+        ts_iso = now_dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+        now_str = now_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        for item in FLEET_DEFINITIONS:
+            eng_id = item["engine_id"]
+            cfg: FaultScenarioConfig = item["seed_scenario"]
+            step = self._fleet_sim_step.get(eng_id, 75) + 1
+            self._fleet_sim_step[eng_id] = step
+
+            raw_frame = self.simulator.generate_frame_at_step(
+                cfg=cfg,
+                step=step,
+                rng=self._fleet_rng,
+                custom_timestamp_iso=ts_iso,
+            )
+            twin_state, alert = self.process_telemetry_frame(raw_frame)
+            results.append((twin_state, alert))
+
+            # Update DB engine status & telemetry
+            existing_eng = self.db.get_engine(eng_id)
+            if existing_eng:
+                if twin_state.predicted.health_index < 55.0 or (
+                    twin_state.predicted.predicted_fault_class not in ("Normal", "Sensor Fault")
+                    and twin_state.predicted.top_probability >= 0.65
+                ):
+                    eng_status = (
+                        "CRITICAL_FAULT"
+                        if twin_state.predicted.health_index < 48.0
+                        else "WARNING_DEGRADED"
+                    )
+                elif twin_state.predicted.sensor_diagnosis.is_sensor_fault_detected:
+                    eng_status = "CAUTION_SENSOR_FAULT"
+                elif twin_state.predicted.is_anomaly:
+                    eng_status = "CAUTION_ANOMALY"
+                else:
+                    eng_status = "NOMINAL_OPERATIONAL"
+
+                eng_record = dict(existing_eng)
+                eng_record.update(
+                    {
+                        "status": eng_status,
+                        "latest_health_index": twin_state.predicted.health_index,
+                        "latest_fault_class": twin_state.predicted.predicted_fault_class,
+                        "latest_rul_status": twin_state.predicted.rul_status,
+                        "latest_rul_hours": twin_state.predicted.rul_hours,
+                        "updated_at": now_str,
+                    }
+                )
+                self.db.upsert_engine(eng_record)
+
+            # Broadcast to subscribers
+            for listener in list(self._telemetry_listeners):
+                try:
+                    listener(twin_state, alert)
+                except Exception:
+                    pass
+
+        return results
+
+    async def run_continuous_simulation(self, interval_sec: float = 1.0) -> None:
+        """Background coroutine advancing fleet simulation continuously."""
+        self._continuous_sim_running = True
+        while self._continuous_sim_running:
+            try:
+                self.step_continuous_fleet_frame()
+            except Exception:
+                pass
+            await asyncio.sleep(interval_sec)
+
+    def stop_continuous_simulation(self) -> None:
+        self._continuous_sim_running = False
 
     def process_telemetry_frame(
         self, frame: TelemetryInputFrame
