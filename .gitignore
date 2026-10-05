@@ -1,4 +1,4 @@
-﻿# Secrets
+# Secrets
 .env
 .env.*
 !.env.example
@@ -28,7 +28,7 @@ build/
 .idea/
 
 # Large datasets: upload separately after size check
-data/
+/data/
 
 # Model backups and local database
 backend/artifacts/backups/

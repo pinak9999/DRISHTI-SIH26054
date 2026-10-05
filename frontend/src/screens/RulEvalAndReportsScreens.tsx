@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -33,6 +33,7 @@ import {
   StatusChip,
   SyntheticBadge,
 } from '../components/ui';
+import { PPT_TRACEABILITY_ITEMS, PptTraceabilityItem } from '../data/pptTraceability';
 
 export { PredictiveMaintenanceRulScreen } from './rul/PredictiveMaintenanceRulScreen';
 
@@ -1255,6 +1256,18 @@ export const SystemStatusAndTechDocsScreen: React.FC<{
       ? readiness.seeded_engine_count
       : 0;
 
+  const [pptCategory, setPptCategory] = useState<string>('all');
+
+  const filteredPptItems = useMemo(() => {
+    if (pptCategory === 'all') return PPT_TRACEABILITY_ITEMS;
+    if (pptCategory === 'digital_twin') {
+      return PPT_TRACEABILITY_ITEMS.filter(
+        (item) => item.category === 'digital_twin' || item.category === 'data_provenance'
+      );
+    }
+    return PPT_TRACEABILITY_ITEMS.filter((item) => item.category === pptCategory);
+  }, [pptCategory]);
+
   return (
     <div>
       <div className="screen-header">
@@ -1517,10 +1530,10 @@ export const SystemStatusAndTechDocsScreen: React.FC<{
             style={{
               fontSize: 11.5,
               color: 'var(--text-secondary)',
-              lineHeight: 1.7,
+              lineHeight: 1.6,
             }}
           >
-            <div>
+            <div style={{ marginBottom: 8 }}>
               • <strong>Modular 5-Layer Architecture:</strong> (1) Telemetry
               Ingestion &amp; Validator (`SocketCAN` codec, CSV, REST,
               WebSocket) → (2) Physics Reference Baseline (
@@ -1531,7 +1544,7 @@ export const SystemStatusAndTechDocsScreen: React.FC<{
               `SensorFaultIsolator`) → (5) SQLite WAL Store &amp; 3D React
               Workstation.
             </div>
-            <div>
+            <div style={{ marginBottom: 8 }}>
               • <strong>Prototype Security &amp; Reliability Controls:</strong>{' '}
               Strict Pydantic range/enum validation,
               duplicate/stale/out-of-order frame detection, parameterized SQLite
@@ -1548,6 +1561,91 @@ export const SystemStatusAndTechDocsScreen: React.FC<{
           </div>
         </GlassPanel>
       </div>
+
+      {/* SIH 2026 PPT REQUIREMENT TRACEABILITY & REPO DISCLOSURES */}
+      <GlassPanel className="panel-card" style={{ marginTop: 'var(--density-gap, 12px)' }}>
+        <div className="panel-card-header" style={{ flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <div className="panel-card-title">
+              SIH 2026 PPT Requirement Traceability &amp; Repo Ground Truth
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+              Wing Warriors2B (ID: 187024) | PS SIH26054 | Ground truth measured from code &amp; models
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <SegmentedControl
+              options={[
+                { value: 'all', label: 'All (17)' },
+                { value: 'capabilities', label: '6 Capabilities' },
+                { value: 'taxonomy', label: '9 Faults' },
+                { value: 'ml_metrics', label: 'ML Targets' },
+                { value: 'architecture', label: 'Tech Stack' },
+                { value: 'digital_twin', label: 'Twin & Data' },
+              ]}
+              value={pptCategory}
+              onChange={(val) => setPptCategory(val)}
+              ariaLabel="PPT requirement category filter"
+            />
+          </div>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="data-table mono" style={{ fontSize: 11 }}>
+            <thead>
+              <tr>
+                <th style={{ width: 110 }}>Ref / ID</th>
+                <th style={{ width: 170 }}>Requirement</th>
+                <th>PPT Slide Claim</th>
+                <th>Codebase Implementation &amp; Source</th>
+                <th style={{ width: 160 }}>Measured Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPptItems.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    <div style={{ fontWeight: 700, color: 'var(--cyan)' }}>{item.id}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{item.slideRef}</div>
+                  </td>
+                  <td>
+                    <strong>{item.requirement}</strong>
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{item.categoryLabel}</div>
+                  </td>
+                  <td style={{ color: 'var(--text-secondary)' }}>
+                    {item.pptClaim}
+                  </td>
+                  <td>
+                    <div>{item.codebaseImplementation}</div>
+                    <div style={{ fontSize: 10, color: 'var(--cyan)', marginTop: 3 }}>
+                      <code>{item.backendSource}</code>
+                    </div>
+                    {item.notes && (
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2, fontStyle: 'italic' }}>
+                        {item.notes}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <StatusChip
+                      status={
+                        item.status === 'VERIFIED' || item.status === 'EXCEEDS_TARGET'
+                          ? 'nominal'
+                          : item.status === 'HONEST_DISCLOSURE'
+                          ? 'caution'
+                          : 'info'
+                      }
+                      label={item.statusLabel}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-muted)', borderTop: '1px solid var(--border-subtle)', paddingTop: 8 }}>
+          * Engineering Integrity Directive: Repository data and measured artifacts take absolute precedence over presentation claims. Discrepancies are explicitly logged in <code>docs/PPT_FIX_LIST.md</code>. Never tune thresholds or fabricate numbers to match slide decks.
+        </div>
+      </GlassPanel>
     </div>
   );
 };

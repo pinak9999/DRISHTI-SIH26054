@@ -42,5 +42,19 @@ This register explicitly documents every discrepancy between the claims in `Wing
 ## 4. Summary of Corrections Applied in v2.0
 1. Replaced legacy v1.0 dual metrics on the Evaluation Screen with singular, audited `ppt_100k_evaluation.held_out_test_metrics`.
 2. Switched served runtime model in `backend/app/ml/pipeline.py` to `ppt_100k_ml_bundle.joblib` with SHA-256 hash published at `/health`.
-3. Added empirical 10th-90th percentile confidence bounds for RUL rather than fixed uncalibrated variance.
-4. Gated RUL estimation with `NOT_ESTIMABLE` whenever the engine operates in `Normal` status or active sensor faults are flagged.
+3. Added low-latency C-level decision tree pointer traversal (`_init_fast_inference`, `_fast_predict_proba`, `_fast_decision_function`) for sub-5ms inference.
+4. Added empirical 10th-90th percentile confidence bounds for RUL rather than fixed uncalibrated variance.
+5. Gated RUL estimation with `NOT_ESTIMABLE` whenever the engine operates in `Normal` status or active sensor faults are flagged.
+6. Aligned residual tolerance colour bands across all screens (`alert_engine.py` constants: CHT 10°C, EGT 25°C, Oil P -0.35 bar, Oil T 8°C, Vib 0.70 mm/s, FF 1.8 L/h).
+
+---
+
+## 5. UI/UX & Responsive Engineering Modernization
+1. **Fluid Responsive Shell**: Integrated `html { font-size: clamp(10px, 0.729vw, 16px); }` and `minmax(0, 1fr)` defensive grid boundaries ensuring 100% browser zoom rendering on 1366×768 laptop displays.
+2. **Auto-Collapsing Navigation & Density Toggle**: Responsive sidebar collapsing below 1400px with localStorage persistence, alongside user-selectable Comfortable vs. Compact workstation density.
+3. **Live WebSocket Telemetry**: Real-time bi-directional streaming at 10 Hz (`/ws/telemetry`) with client state machine (`CONNECTING`, `LIVE`, `RECONNECTING`, `OFFLINE`) and continuous simulation loop.
+4. **3D Viewport Optimization**: Three.js canvas DPR clamped to `[1, 1.5]` to avoid GPU fill-rate exhaustion; automatic frameloop pausing (`frameloop="never"`) when tab is backgrounded.
+5. **Vendor Chunk Splitting**: Bundles split into `three-vendor`, `react-vendor`, and `ui-vendor`, resulting in a lean ~155 kB gzip application bundle.
+6. **Zero Emoji Standard**: Clean aerospace engineering interface using exclusively Lucide SVG icons and monochrome/status-coded accents.
+7. **Complete PPT Traceability Matrix**: Interactive filterable matrix embedded directly in the Documentation screen (`frontend/src/data/pptTraceability.ts`) mapping all 17 requirements and slide claims to code, API endpoints, and measured status.
+
