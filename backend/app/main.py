@@ -74,6 +74,7 @@ def create_app(service: Optional[DrishtiTwinService] = None) -> FastAPI:
             "physics_model_version": svc.physics_model.model_version,
             "ml_model_version": svc.ml_pipeline.model_version,
             "ml_models_loaded": svc.ml_pipeline.is_loaded,
+            "model_bundle_sha256": svc.ml_pipeline.bundle_sha256,
             "last_inference_latency_ms": svc.last_inference_latency_ms,
             "throughput_frames_per_sec": svc.throughput_frames_per_sec,
             "can_interface": svc.can_adapter.get_interface_status(),
@@ -120,6 +121,7 @@ def create_app(service: Optional[DrishtiTwinService] = None) -> FastAPI:
         return {
             "ml_loaded": svc.ml_pipeline.is_loaded,
             "ml_model_version": svc.ml_pipeline.model_version,
+            "bundle_sha256": svc.ml_pipeline.bundle_sha256,
             "physics_metadata": svc.physics_model.get_model_metadata(),
             "evaluation_report": svc.ml_pipeline.evaluation_report,
             "data_quality_stats": svc.validator.get_rejection_stats(),

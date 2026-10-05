@@ -58,7 +58,12 @@ def test_backend_health_and_model_status_and_artifact_backup(
     assert h_data["status"] == "ok"
     assert h_data["ml_models_loaded"] is True
     assert h_data["physics_model_version"] == "Rotax914-Simplified-Ref-v1.0"
-    assert h_data["ml_model_version"] == "DRISHTI-ML-Ensemble-v1.0"
+    assert h_data["ml_model_version"] in (
+        "DRISHTI-ML-Ensemble-v1.0",
+        "DRISHTI-PPT-100K-Ensemble-v2.0",
+    )
+    assert "model_bundle_sha256" in h_data
+    assert len(h_data["model_bundle_sha256"]) == 64
     assert h_data["can_interface"]["hardware_connected"] is False
 
     r_status = client.get("/api/model-status")
@@ -66,6 +71,8 @@ def test_backend_health_and_model_status_and_artifact_backup(
     s_data = r_status.json()
     assert s_data["ml_loaded"] is True
     assert "evaluation_report" in s_data
+    assert "bundle_sha256" in s_data
+    assert s_data["bundle_sha256"] == h_data["model_bundle_sha256"]
     assert s_data["evaluation_report"]["classification_metrics"]["macro_f1"] > 0.85
 
     prod_bundle = ROOT_DIR / "backend" / "artifacts" / "drishti_ml_bundle.joblib"
@@ -75,6 +82,13 @@ def test_backend_health_and_model_status_and_artifact_backup(
     assert prod_bundle.exists(), "Production ML bundle must exist"
     assert backup_bundle.exists(), "Backed-up ML bundle must exist"
     assert _sha256(prod_bundle) == _sha256(backup_bundle)
+
+    ppt_bundle = ROOT_DIR / "backend" / "artifacts" / "ppt_100k_ml_bundle.joblib"
+    ppt_backup = (
+        ROOT_DIR / "backend" / "artifacts" / "backups" / "ppt_100k_ml_bundle.joblib.bak"
+    )
+    if ppt_bundle.exists() and ppt_backup.exists():
+        assert _sha256(ppt_bundle) == _sha256(ppt_backup)
 
 
 def test_all_routes_registered_and_error_handling(
