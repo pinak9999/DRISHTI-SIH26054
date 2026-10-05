@@ -64,6 +64,13 @@
   --space-8: 32px;
   --space-10: 40px;
 
+  /* Density Tokens */
+  --density-padding:    16px;
+  --density-gap:        14px;
+  --density-card-p:     14px;
+  --density-table-py:   9px;
+  --density-kpi-py:     12px;
+
   /* Shell Metrics */
   --topbar-h:           52px;
   --sidebar-w:          64px;
@@ -135,6 +142,34 @@
   --shadow-critical: 0 0 12px rgba(220, 38, 38, 0.18);
 }
 
+[data-density="compact"] {
+  --density-padding:    10px;
+  --density-gap:        8px;
+  --density-card-p:     10px;
+  --density-table-py:   5px;
+  --density-kpi-py:     8px;
+  --topbar-h:           46px;
+}
+
+[data-density="compact"] .viewport-content {
+  padding: 10px 14px;
+}
+
+[data-density="compact"] .kpi-tile,
+[data-density="compact"] .cmd-kpi-card {
+  padding: 8px 10px;
+}
+
+[data-density="compact"] .glass-panel,
+[data-density="compact"] .panel-card {
+  padding: 10px 12px;
+}
+
+[data-density="compact"] .data-table th,
+[data-density="compact"] .data-table td {
+  padding: 5px 8px;
+}
+
 :focus-visible {
   outline: 2px solid var(--cyan);
   outline-offset: 2px;
@@ -153,7 +188,9 @@
    RESET & BASE
    ========================================================================= */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 14px; }
+html {
+  font-size: clamp(10px, 0.729vw, 16px);
+}
 body {
   background-color: var(--bg-root);
   color: var(--text-primary);
@@ -452,19 +489,80 @@ body {
   font-family: var(--font-mono);
 }
 
+.density-toggle-btn {
+  color: var(--text-secondary);
+}
+.density-toggle-btn:hover {
+  color: var(--cyan);
+}
+
+.status-pill .status-text-short {
+  display: none;
+}
+
+/* Responsive Topbar Priority Collapse */
+@media (max-width: 1400px) {
+  .brand-subtitle {
+    display: none;
+  }
+  .drdo-sub {
+    display: none;
+  }
+}
+
+@media (max-width: 1280px) {
+  .topbar {
+    padding: 0 10px;
+    gap: 8px;
+  }
+  .drdo-text {
+    display: none;
+  }
+  .topbar-select-pill .pill-label {
+    display: none;
+  }
+  .phase-pill .pill-label {
+    display: none;
+  }
+}
+
+@media (max-width: 1120px) {
+  .status-pill .status-text-full {
+    display: none;
+  }
+  .status-pill .status-text-short {
+    display: inline;
+  }
+  .topbar-select-pill.mode-pill {
+    display: none;
+  }
+  .phase-pill {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .drdo-badge {
+    display: none;
+  }
+  .brand-badge {
+    display: none;
+  }
+}
+
 /* =========================================================================
    WORKSTATION BODY & SIDEBAR
    ========================================================================= */
 .workstation-body {
   display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   overflow: hidden;
   height: calc(100vh - var(--topbar-h));
   transition: grid-template-columns 0.2s ease;
 }
 
 .workstation-body.sidebar-expanded {
-  grid-template-columns: var(--sidebar-w-expanded) 1fr;
+  grid-template-columns: var(--sidebar-w-expanded) minmax(0, 1fr);
 }
 
 .sidebar {
@@ -3610,41 +3708,64 @@ body {
 /* =========================================================================
    10. RESPONSIVE BREAKPOINTS (Desktop, Laptop, Tablet, Mobile)
    ========================================================================= */
+/* Layout containers fluid min-width defense against grid blowout */
+.cmd-kpi-grid > *,
+.fleet-kpi-grid > *,
+.kpi-row-5 > *,
+.gauges-grid-8 > *,
+.cmd-mid-grid > *,
+.cmd-bot-grid > *,
+.bottom-row-3panels > *,
+.twin-3d-workspace > *,
+.rul-breakdown-grid > *,
+.rul-charts-grid > *,
+.fleet-grid > *,
+.fleet-engine-grid > *,
+.viewport-content,
+.main-viewport,
+.workstation-body {
+  min-width: 0;
+}
+
 @media (max-width: 1440px) {
   .topbar-project-banner { max-width: 440px; }
-  .kpi-row-5 { grid-template-columns: repeat(5, 1fr); }
+  .kpi-row-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .mid-section-2col { grid-template-columns: 1.35fr 1fr; }
-  .fleet-kpi-grid { grid-template-columns: repeat(4, 1fr); }
+  .fleet-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .fleet-lower-grid { grid-template-columns: 1.3fr 1fr; }
 }
 
 @media (max-width: 1366px) {
-  :root { --sidebar-w: 200px; }
+  :root { --sidebar-w-expanded: 210px; }
   .kpi-v4-val { font-size: 20px; }
-  .gauges-grid-8 { grid-template-columns: repeat(4, 1fr); gap: 6px 4px; }
+  .gauges-grid-8 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 4px; }
   .gauge-svg-wrap { width: 64px; height: 38px; }
   .gauge-val-big { font-size: 13.5px; }
   .topbar-project-banner { max-width: 380px; }
   .topbar-drdo-crest { display: flex; }
+  .cmd-mid-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr) minmax(0, 0.9fr); }
+  .cmd-bot-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 0.9fr); }
 }
 
 @media (max-width: 1280px) {
-  :root { --sidebar-w: 190px; }
+  :root { --sidebar-w-expanded: 200px; }
   .topbar-project-banner { max-width: 320px; font-size: 10px; }
   .banner-subtitle { display: none; }
-  .kpi-row-5 { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .kpi-row-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
   .kpi-v4-val { font-size: 18px; }
-  .bottom-row-3panels { grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; }
+  .bottom-row-3panels { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
 }
 
 @media (max-width: 1120px) {
-  .kpi-row-5 { grid-template-columns: repeat(3, 1fr); }
+  .kpi-row-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .mid-section-2col { grid-template-columns: 1fr; }
   .bottom-row-3panels { grid-template-columns: 1fr; }
   .topbar-project-banner { display: none; }
-  .fleet-kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .fleet-engine-grid { grid-template-columns: repeat(2, 1fr); }
+  .fleet-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fleet-engine-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fleet-lower-grid { grid-template-columns: 1fr; }
+  .cmd-mid-grid { grid-template-columns: 1fr; }
+  .cmd-bot-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {

@@ -120,7 +120,22 @@ const NAV_ITEMS = [
 
 export const App: React.FC = () => {
   const [activeScreen, setActiveScreen] = useState<string>('fleet');
-  const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(true);
+  const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('drishti-sidebar-expanded');
+      if (saved !== null) {
+        return saved === 'true';
+      }
+      return window.innerWidth >= 1400;
+    }
+    return true;
+  });
+  const [density, setDensity] = useState<'comfortable' | 'compact'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('drishti-density') as 'comfortable' | 'compact') || 'comfortable';
+    }
+    return 'comfortable';
+  });
   const [selectedEngineId, setSelectedEngineId] =
     useState<string>('ENG-MALE-02');
   const [fleet, setFleet] = useState<FleetOverview | null>(null);
@@ -153,6 +168,21 @@ export const App: React.FC = () => {
   }, [theme]);
 
   useEffect(() => {
+    document.documentElement.setAttribute('data-density', density);
+    localStorage.setItem('drishti-density', density);
+  }, [density]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (localStorage.getItem('drishti-sidebar-expanded') === null) {
+        setSidebarExpanded(window.innerWidth >= 1400);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
     const onHashChange = () => {
       setIsUiLab(Boolean(import.meta.env.DEV && window.location.hash === '#/ui-lab'));
     };
@@ -162,6 +192,18 @@ export const App: React.FC = () => {
 
   const toggleTheme = () => {
     setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+  };
+
+  const toggleDensity = () => {
+    setDensity((d) => (d === 'comfortable' ? 'compact' : 'comfortable'));
+  };
+
+  const toggleSidebar = () => {
+    setSidebarExpanded((prev) => {
+      const next = !prev;
+      localStorage.setItem('drishti-sidebar-expanded', String(next));
+      return next;
+    });
   };
 
   const loadGlobalData = async () => {
@@ -286,7 +328,7 @@ export const App: React.FC = () => {
         <div className="brand-block">
           <button
             className="mobile-nav-trigger"
-            onClick={() => setSidebarExpanded((v) => !v)}
+            onClick={toggleSidebar}
             aria-label="Toggle navigation"
           >
             <Menu size={16} />
@@ -318,16 +360,21 @@ export const App: React.FC = () => {
           <div className={`status-pill ${apiOnline ? 'online' : errorBanner ? 'offline' : 'connecting'}`}>
             <span className={`status-dot ${apiStatus}`} />
             <span className="mono status-text">
-              {apiOnline
-                ? `API Connected ${latencyMs.toFixed(2)} ms`
-                : errorBanner
-                ? 'API Offline'
-                : 'Connecting...'}
+              <span className="status-text-full">
+                {apiOnline
+                  ? `API Connected ${latencyMs.toFixed(2)} ms`
+                  : errorBanner
+                  ? 'API Offline'
+                  : 'Connecting...'}
+              </span>
+              <span className="status-text-short">
+                {apiOnline ? `${latencyMs.toFixed(0)}ms` : 'Offline'}
+              </span>
             </span>
           </div>
 
           {/* Simulation / Hardware Mode Selector */}
-          <div className="topbar-select-pill">
+          <div className="topbar-select-pill mode-pill">
             <span className="pill-label">Mode</span>
             <select
               className="pill-select mono"
@@ -377,18 +424,28 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Section: DRDO Emblem, Theme, Alerts, User Avatar */}
+        {/* Right Section: DRDO Emblem, Theme, Density, Alerts, User Avatar */}
         <div className="topbar-right">
           {/* DRDO Branding */}
           <div className="drdo-badge" title="Defence Research and Development Organisation — Robotics & Drones">
             <div className="drdo-crest">
-              <span className="drdo-insignia">🛡️</span>
+              <ShieldCheck size={16} className="drdo-insignia" color="#38bdf8" />
             </div>
             <div className="drdo-text">
               <span className="drdo-org">DRDO</span>
               <span className="drdo-sub">Robotics & Drones</span>
             </div>
           </div>
+
+          {/* Display Density Toggle */}
+          <button
+            className="topbar-icon-btn density-toggle-btn"
+            onClick={toggleDensity}
+            title={`Display Density: ${density === 'comfortable' ? 'Comfortable (click for Compact)' : 'Compact (click for Comfortable)'}`}
+            aria-label="Toggle display density"
+          >
+            <Sliders size={14} />
+          </button>
 
           {/* Theme visual toggle */}
           <button
@@ -441,7 +498,7 @@ export const App: React.FC = () => {
           <div className="sidebar-header-toggle">
             <button
               className="rail-toggle-btn"
-              onClick={() => setSidebarExpanded((v) => !v)}
+              onClick={toggleSidebar}
               title={sidebarExpanded ? 'Collapse Navigation' : 'Expand Navigation'}
               aria-label={sidebarExpanded ? 'Collapse Navigation' : 'Expand Navigation'}
             >
@@ -527,7 +584,7 @@ export const App: React.FC = () => {
                       textDecoration: 'none',
                     }}
                   >
-                    🔬 Design System UI Lab
+                    <Sliders size={12} /> Design System UI Lab
                   </a>
                 )}
               </div>
