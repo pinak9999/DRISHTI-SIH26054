@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { motion, useSpring, useTransform } from 'framer-motion';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, animate } from 'framer-motion';
 
 export interface KpiTileProps {
   label: string;
@@ -27,21 +27,36 @@ export const KpiTile: React.FC<KpiTileProps> = ({
   onClick,
 }) => {
   const isNumber = typeof value === 'number';
-  const spring = useSpring(0, { mass: 0.8, stiffness: 75, damping: 15 });
-  const displayVal = useTransform(spring, (current) => current.toFixed(precision));
-  const [renderedStr, setRenderedStr] = useState<string>(
-    isNumber ? (0).toFixed(precision) : String(value)
+  const [renderedStr, setRenderedStr] = useState<string>(() =>
+    isNumber ? Number(value).toFixed(precision) : String(value)
   );
+  const prevValRef = useRef<number>(isNumber ? Number(value) : 0);
 
   useEffect(() => {
-    if (isNumber) {
-      spring.set(value);
-      const unsubscribe = displayVal.on('change', (v) => setRenderedStr(v));
-      return () => unsubscribe();
-    } else {
+    if (!isNumber) {
       setRenderedStr(String(value));
+      return;
     }
-  }, [value, isNumber, spring, displayVal]);
+
+    const numVal = Number(value);
+    const startVal = prevValRef.current;
+    prevValRef.current = numVal;
+
+    if (Math.abs(numVal - startVal) < 0.0001) {
+      setRenderedStr(numVal.toFixed(precision));
+      return;
+    }
+
+    const controls = animate(startVal, numVal, {
+      duration: 0.3,
+      ease: 'easeOut',
+      onUpdate: (latest) => {
+        setRenderedStr(latest.toFixed(precision));
+      },
+    });
+
+    return () => controls.stop();
+  }, [value, isNumber, precision]);
 
   const tileClasses = [
     'glass-panel',

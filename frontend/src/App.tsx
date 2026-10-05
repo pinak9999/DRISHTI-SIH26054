@@ -143,7 +143,7 @@ export const App: React.FC = () => {
     return 'dark';
   });
   const [isUiLab, setIsUiLab] = useState<boolean>(() => {
-    return typeof window !== 'undefined' && window.location.hash === '#/ui-lab';
+    return Boolean(import.meta.env.DEV && typeof window !== 'undefined' && window.location.hash === '#/ui-lab');
   });
 
   useEffect(() => {
@@ -153,7 +153,7 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     const onHashChange = () => {
-      setIsUiLab(window.location.hash === '#/ui-lab');
+      setIsUiLab(Boolean(import.meta.env.DEV && window.location.hash === '#/ui-lab'));
     };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
@@ -482,39 +482,41 @@ export const App: React.FC = () => {
               <strong>Advisory Digital Twin</strong>
               DRDO SIH26054 Technical Demonstrator. Procedural engine geometry and ML diagnostics. No live flight hardware connection.
             </div>
-            <div style={{ marginTop: 8 }}>
-              {isUiLab ? (
-                <a
-                  href="#"
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: 'var(--cyan)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    textDecoration: 'none',
-                  }}
-                >
-                  ← Return to Operations
-                </a>
-              ) : (
-                <a
-                  href="#/ui-lab"
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: 'var(--cyan)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    textDecoration: 'none',
-                  }}
-                >
-                  🔬 Design System UI Lab
-                </a>
-              )}
-            </div>
+            {import.meta.env.DEV && (
+              <div style={{ marginTop: 8 }}>
+                {isUiLab ? (
+                  <a
+                    href="#"
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: 'var(--cyan)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    ← Return to Operations
+                  </a>
+                ) : (
+                  <a
+                    href="#/ui-lab"
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: 'var(--cyan)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    🔬 Design System UI Lab
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </aside>
 
@@ -533,23 +535,24 @@ export const App: React.FC = () => {
           )}
 
           <div className="viewport-content">
-            {isUiLab ? (
+            {import.meta.env.DEV && isUiLab ? (
               <UiLabShowcase currentTheme={theme} onToggleTheme={toggleTheme} />
             ) : (
               <>
                 {activeScreen === 'fleet' && (
-              <FleetCommandCenterScreen
-                fleet={fleet}
-                selectedEngineId={selectedEngineId}
-                selectedEngineRecord={selectedEngineRecord}
-                latestState={latestState}
-                telemetry={engineTelemetry}
-                engineAlerts={engineAlerts}
-                onSelectEngine={handleSelectEngine}
-                onRefreshFleet={handleRefreshAll}
-                onNavigate={setActiveScreen}
-              />
-            )}
+                  <FleetCommandCenterScreen
+                    fleet={fleet}
+                    selectedEngineId={selectedEngineId}
+                    selectedEngineRecord={selectedEngineRecord}
+                    latestState={latestState}
+                    telemetry={engineTelemetry}
+                    engineAlerts={engineAlerts}
+                    onSelectEngine={handleSelectEngine}
+                    onRefreshFleet={handleRefreshAll}
+                    onNavigate={setActiveScreen}
+                    backendError={errorBanner}
+                  />
+                )}
 
             {activeScreen === 'twin' && (
               <EngineDigitalTwinScreen
