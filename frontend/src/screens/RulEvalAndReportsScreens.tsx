@@ -119,7 +119,6 @@ export const PredictiveMaintenanceRulScreen: React.FC<{
 
   if (loading || !healthData) {
     return (
-<<<<<<< HEAD
       <div className="panel-card" style={{ padding: '36px 20px', textAlign: 'center' }}>
         <div
           style={{
@@ -137,10 +136,6 @@ export const PredictiveMaintenanceRulScreen: React.FC<{
         <div style={{ color: '#94a3b8', fontSize: 11, marginTop: 8 }}>
           Aggregating health index history, physics degradation models, and remaining flight hours.
         </div>
-=======
-      <div className="panel-card">
-        Loading degradation trajectory and RUL estimates for {engineId}…
->>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
       </div>
     );
   }
@@ -577,7 +572,6 @@ export const ModelEvaluationScreen: React.FC<{
 
   const report = modelStatus?.evaluation_report;
   if (!report) {
-<<<<<<< HEAD
     return (
       <div className="panel-card" style={{ padding: '36px 20px', textAlign: 'center' }}>
         <div
@@ -598,9 +592,6 @@ export const ModelEvaluationScreen: React.FC<{
         </div>
       </div>
     );
-=======
-    return <div className="panel-card">Loading ML evaluation metrics…</div>;
->>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
   }
 
   const clsMetrics = report.classification_metrics;

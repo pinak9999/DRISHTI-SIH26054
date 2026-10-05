@@ -845,22 +845,16 @@ export const Engine3DViewport: React.FC<{
   twinState: FourValueDigitalTwinState | null;
   engineHours?: number;
   compact?: boolean;
-<<<<<<< HEAD
   wireframe?: boolean;
   showControls?: boolean;
-=======
->>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
   selectedSubsystemId?: EngineSubsystemId;
   onSubsystemChange?: (id: EngineSubsystemId) => void;
 }> = ({
   twinState,
   engineHours = 420.0,
   compact = false,
-<<<<<<< HEAD
   wireframe: controlledWireframe,
   showControls,
-=======
->>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
   selectedSubsystemId,
   onSubsystemChange,
 }) => {
@@ -984,7 +978,6 @@ export const Engine3DViewport: React.FC<{
     return (
       <div
         className="twin-canvas-container"
-<<<<<<< HEAD
         style={{
           width: '100%',
           height: '100%',
@@ -994,9 +987,6 @@ export const Engine3DViewport: React.FC<{
           flexDirection: 'column',
           position: 'relative',
           marginBottom: 0,
-          border: 'none',
-          background: 'transparent',
-          boxShadow: 'none',
         }}
       >
         {shouldShowControls && (
@@ -1025,6 +1015,18 @@ export const Engine3DViewport: React.FC<{
                   >
                     {twinState.predicted.predicted_fault_class}
                   </span>
+                )}
+              </div>
+              <div className="mono" style={{ fontSize: 11, color: '#94a3b8' }}>
+                {twinState ? (
+                  <>
+                    RPM: {twinState.actual.rpm.toFixed(0)} · CHT:{' '}
+                    {twinState.actual.cht_c.toFixed(1)}°C · Oil P:{' '}
+                    {twinState.actual.oil_pressure_bar.toFixed(2)} bar · Vib:{' '}
+                    {twinState.actual.vibration_rms_mms.toFixed(2)} mm/s
+                  </>
+                ) : (
+                  'Telemetry state unavailable — showing reference geometry'
                 )}
               </div>
             </div>
@@ -1072,101 +1074,13 @@ export const Engine3DViewport: React.FC<{
             </div>
           </div>
         )}
-=======
-        style={{ minHeight: 370, marginBottom: 0 }}
-      >
-        <div className="twin-viewport-hud-top">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span className="badge badge-info">
-                3D PROCEDURAL BOXER TWIN
-              </span>
-              <span className="badge badge-synthetic">
-                {twinState
-                  ? twinState.is_synthetic
-                    ? 'SYNTHETIC TELEMETRY'
-                    : 'RECORDED TELEMETRY'
-                  : 'AWAITING TELEMETRY'}
-              </span>
-              {twinState && (
-                <span
-                  className={
-                    twinState.predicted.predicted_fault_class === 'Normal'
-                      ? 'badge badge-nominal'
-                      : twinState.predicted.health_index < 48
-                      ? 'badge badge-critical'
-                      : 'badge badge-warning'
-                  }
-                >
-                  {twinState.predicted.predicted_fault_class}
-                </span>
-              )}
-            </div>
-            <div className="mono" style={{ fontSize: 11, color: '#94a3b8' }}>
-              {twinState ? (
-                <>
-                  RPM: {twinState.actual.rpm.toFixed(0)} · CHT:{' '}
-                  {twinState.actual.cht_c.toFixed(1)}°C · Oil P:{' '}
-                  {twinState.actual.oil_pressure_bar.toFixed(2)} bar · Vib:{' '}
-                  {twinState.actual.vibration_rms_mms.toFixed(2)} mm/s
-                </>
-              ) : (
-                'Telemetry state unavailable — showing reference geometry'
-              )}
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            <button
-              className="btn btn-sm"
-              onClick={() => handleCameraPreset([3.6, 2.2, 3.8])}
-              title="Reset Isometric Camera"
-            >
-              <RotateCcw size={11} /> Iso
-            </button>
-            <button
-              className="btn btn-sm"
-              onClick={() => handleCameraPreset([0, 5.2, 0.01])}
-              title="Top Plan View"
-            >
-              Top
-            </button>
-            <button
-              className="btn btn-sm"
-              onClick={() => handleCameraPreset([0, 0.4, 5.0])}
-              title="Front Propeller View"
-            >
-              Front
-            </button>
-            <button
-              className="btn btn-sm"
-              onClick={() => handleCameraPreset([4.8, 0.5, 0])}
-              title="Side Cylinder View"
-            >
-              Side
-            </button>
-            <button
-              className={`btn btn-sm ${showLabels ? 'btn-primary' : ''}`}
-              onClick={() => setShowLabels((l) => !l)}
-            >
-              <Eye size={11} /> Labels
-            </button>
-            <button
-              className={`btn btn-sm ${explodeFactor > 0 ? 'btn-primary' : ''}`}
-              onClick={() => setExplodeFactor((v) => (v > 0 ? 0 : 0.65))}
-            >
-              <Layers size={11} /> {explodeFactor > 0 ? 'Assemble' : 'Explode'}
-            </button>
-          </div>
-        </div>
->>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
         {webglAvailable ? (
           <WebGLErrorBoundary fallback={fallbackSchematic}>
             <Canvas
               key={cameraResetKey}
-<<<<<<< HEAD
               camera={{ position: cameraPos, fov: 34, near: 0.1, far: 1000 }}
               gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-              style={{ width: '100%', height: '100%', flex: 1, minHeight: 380, display: 'block' }}
+              style={{ width: '100%', height: '100%', flex: 1, minHeight: 330, display: 'block' }}
             >
               <ambientLight intensity={0.8} />
               <directionalLight position={[6, 8, 5]} intensity={1.5} />
@@ -1174,16 +1088,6 @@ export const Engine3DViewport: React.FC<{
               <pointLight position={[0, 0, 0]} intensity={0.4} color="#36d9ff" />
               <gridHelper
                 args={[10, 20, '#1d3166', '#0d152a']}
-=======
-              camera={{ position: cameraPos, fov: 40 }}
-              style={{ flex: 1, minHeight: 330 }}
-            >
-              <ambientLight intensity={0.7} />
-              <directionalLight position={[6, 8, 5]} intensity={1.4} />
-              <directionalLight position={[-6, -4, -4]} intensity={0.5} color="#38bdf8" />
-              <gridHelper
-                args={[10, 20, '#1a2440', '#0d1428']}
->>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
                 position={[0, -1.45, 0]}
               />
               <ProceduralAeroEngineScene
@@ -1209,7 +1113,6 @@ export const Engine3DViewport: React.FC<{
         ) : (
           fallbackSchematic
         )}
-<<<<<<< HEAD
         {shouldShowControls && (
           <div className="twin-viewport-hud-bottom">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1234,30 +1137,6 @@ export const Engine3DViewport: React.FC<{
             </div>
           </div>
         )}
-=======
-        <div className="twin-viewport-hud-bottom">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="badge badge-info">{selectedMeta.code}</span>
-            <strong style={{ fontSize: 11.5, color: '#ffffff' }}>
-              {selectedMeta.name}
-            </strong>
-            <span
-              className={
-                selectedStatus.status === 'CRITICAL'
-                  ? 'badge badge-critical'
-                  : selectedStatus.status === 'WARNING'
-                  ? 'badge badge-warning'
-                  : 'badge badge-nominal'
-              }
-            >
-              {selectedStatus.status}
-            </span>
-          </div>
-          <div className="mono" style={{ fontSize: 10.5, color: '#94a3b8' }}>
-            {selectedStatus.reason} · Click any 3D component to inspect
-          </div>
-        </div>
->>>>>>> e68479d (Upgrade DRISHTI premium digital twin UI)
       </div>
     );
   }
