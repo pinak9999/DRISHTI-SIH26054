@@ -1,7 +1,7 @@
 import React from 'react';
 
 export interface StatusChipProps {
-  status?: 'nominal' | 'caution' | 'critical' | 'info';
+  status?: 'nominal' | 'caution' | 'warning' | 'critical' | 'info';
   label: string;
   pulse?: boolean;
   icon?: React.ReactNode;

@@ -84,26 +84,42 @@ export const FleetCommandCenterScreen: React.FC<FleetCommandCenterScreenProps> =
     useState<EngineSubsystemId>('cylinder_heads_valves');
   const [cameraKey, setCameraKey] = useState<number>(0);
   const [engineSparklines, setEngineSparklines] = useState<Record<string, number[]>>({});
+  const [sparklinesLoading, setSparklinesLoading] = useState<boolean>(true);
 
   // Fetch recent telemetry for fleet sparklines to ensure authentic data
   useEffect(() => {
-    if (!fleet?.engines) return;
+    if (!fleet?.engines || fleet.engines.length === 0) {
+      setSparklinesLoading(false);
+      return;
+    }
 
     let isMounted = true;
+    setSparklinesLoading(true);
+
     const fetchRecentTelemetry = async () => {
       const sparkMap: Record<string, number[]> = {};
-      for (const eng of fleet.engines) {
-        try {
-          const res = await drishtiApi.getEngineTelemetry(eng.engine_id, undefined, 15);
-          if (res?.items && res.items.length > 0 && isMounted) {
-            sparkMap[eng.engine_id] = res.items.map((t) => t.actual.cht_c);
-          }
-        } catch {
-          // If telemetry query fails, fallback gracefully
+      try {
+        await Promise.all(
+          fleet.engines.map(async (eng) => {
+            try {
+              const res = await drishtiApi.getEngineTelemetry(eng.engine_id, undefined, 15);
+              if (res?.items && isMounted) {
+                sparkMap[eng.engine_id] = res.items.map((t) => t.actual.cht_c);
+              }
+            } catch {
+              if (isMounted) {
+                sparkMap[eng.engine_id] = [];
+              }
+            }
+          })
+        );
+        if (isMounted) {
+          setEngineSparklines(sparkMap);
         }
-      }
-      if (isMounted && Object.keys(sparkMap).length > 0) {
-        setEngineSparklines(sparkMap);
+      } finally {
+        if (isMounted) {
+          setSparklinesLoading(false);
+        }
       }
     };
 
@@ -236,18 +252,18 @@ export const FleetCommandCenterScreen: React.FC<FleetCommandCenterScreenProps> =
           label="Active Alerts"
           value={fleet.total_active_alerts}
           precision={0}
-          subtext={`${unackCount} unacknowledged`}
+          subtext={`${unackCount} unacknowledged (recent ${sourceAlerts.length})`}
           status={fleet.total_active_alerts > 0 ? 'critical' : 'nominal'}
           icon={<AlertTriangle size={18} />}
           onClick={() => onNavigate('faults')}
         />
 
         <KpiTile
-          label="Telemetry Quality"
+          label="Active engine quality"
           value={qualityScore}
           unit="%"
           precision={1}
-          subtext={isCanValid ? 'Clean CAN · Isochronous 10 Hz' : 'Degraded Frames Detected'}
+          subtext={`${selectedEngineId} · ${isCanValid ? 'Clean CAN · Isochronous 10 Hz' : 'Degraded Frames Detected'}`}
           status={isCanValid ? 'nominal' : 'caution'}
           icon={<Wifi size={18} />}
         />
@@ -294,27 +310,26 @@ export const FleetCommandCenterScreen: React.FC<FleetCommandCenterScreenProps> =
       <div className="fleet-engine-grid">
         {fleet.engines.map((engine) => {
           const isSelected = engine.engine_id === selectedEngineId;
-          const statusVariant: 'nominal' | 'caution' | 'critical' = engine.status
+          const statusVariant: 'nominal' | 'caution' | 'warning' | 'critical' = engine.status
             .toLowerCase()
             .includes('crit')
             ? 'critical'
+            : engine.status.toLowerCase().includes('warn')
+            ? 'warning'
             : engine.status.toLowerCase().includes('caut')
             ? 'caution'
             : 'nominal';
 
           const sparkData =
-            isSelected && telemetry.length > 1
+            isSelected && telemetry.length > 0
               ? telemetry.slice(-15).map((t) => t.actual.cht_c)
-              : engineSparklines[engine.engine_id] || [
-                  engine.latest_health_index - 1.2,
-                  engine.latest_health_index - 0.4,
-                  engine.latest_health_index - 0.8,
-                  engine.latest_health_index,
-                ];
+              : engineSparklines[engine.engine_id] || [];
 
           const sparkColor =
             statusVariant === 'critical'
               ? 'var(--color-critical)'
+              : statusVariant === 'warning'
+              ? 'var(--color-warning)'
               : statusVariant === 'caution'
               ? 'var(--color-caution)'
               : 'var(--cyan)';
@@ -384,14 +399,20 @@ export const FleetCommandCenterScreen: React.FC<FleetCommandCenterScreenProps> =
                 </div>
 
                 <div className="fleet-sparkline-wrap">
-                  <span className="fleet-sparkline-label">CHT Trend</span>
-                  <Sparkline
-                    data={sparkData}
-                    width={76}
-                    height={28}
-                    color={sparkColor}
-                    strokeWidth={1.6}
-                  />
+                  <span className="fleet-sparkline-label">CHT (°C)</span>
+                  {sparklinesLoading && sparkData.length === 0 ? (
+                    <Skeleton variant="rect" width={76} height={28} />
+                  ) : sparkData.length > 0 ? (
+                    <Sparkline
+                      data={sparkData}
+                      width={76}
+                      height={28}
+                      color={sparkColor}
+                      strokeWidth={1.6}
+                    />
+                  ) : (
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>no history</span>
+                  )}
                 </div>
               </div>
             </GlassPanel>

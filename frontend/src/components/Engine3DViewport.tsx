@@ -1395,7 +1395,7 @@ export const Engine3DViewport: React.FC<{
             style={{
               fontSize: 13.5,
               fontWeight: 700,
-              color: '#ffffff',
+              color: 'var(--text-primary)',
               marginBottom: 4,
             }}
           >
@@ -1404,7 +1404,7 @@ export const Engine3DViewport: React.FC<{
           <div
             style={{
               fontSize: 11.5,
-              color: '#94a3b8',
+              color: 'var(--text-secondary)',
               marginBottom: 8,
             }}
           >
@@ -1412,22 +1412,15 @@ export const Engine3DViewport: React.FC<{
           </div>
         </div>
 
-        <div
-          style={{
-            padding: '7px 9px',
-            background: 'rgba(10, 15, 29, 0.85)',
-            border: '1px solid #1c2942',
-            borderRadius: 3,
-          }}
-        >
+        <div className="twin-inspector-detail-card">
           <div className="kpi-label">Active State & Localization Basis</div>
-          <div className="mono" style={{ fontSize: 11, color: '#f1f5f9' }}>
+          <div className="mono" style={{ fontSize: 11, color: 'var(--text-primary)' }}>
             {selectedStatus.reason}
           </div>
           <div
             style={{
               fontSize: 10.5,
-              color: '#64748b',
+              color: 'var(--text-muted)',
               marginTop: 4,
             }}
           >

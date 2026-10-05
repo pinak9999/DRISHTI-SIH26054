@@ -1400,7 +1400,7 @@ body {
 .screen-title {
   font-size: 16px;
   font-weight: 700;
-  color: var(--text-white);
+  color: var(--text-primary);
   line-height: 1.25;
 }
 .screen-desc {
@@ -2141,6 +2141,31 @@ body {
   font-weight: 600;
   box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
 }
+[data-theme="light"] .comp-tree-btn {
+  background: var(--bg-card);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+[data-theme="light"] .comp-tree-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-medium);
+}
+[data-theme="light"] .comp-tree-btn.selected {
+  background: rgba(2, 132, 199, 0.12);
+  border-color: var(--cyan);
+  color: var(--cyan);
+  font-weight: 600;
+}
+.twin-inspector-detail-card {
+  padding: 7px 9px;
+  background: rgba(10, 15, 29, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+}
+[data-theme="light"] .twin-inspector-detail-card {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+}
 
 .comp-status-dot {
   width: 7px;
@@ -2324,6 +2349,11 @@ body {
   border-color: rgba(245, 158, 11, 0.35);
   background: rgba(245, 158, 11, 0.1);
   color: var(--color-caution);
+}
+.ui-status-chip.warning {
+  border-color: rgba(249, 115, 22, 0.35);
+  background: rgba(249, 115, 22, 0.1);
+  color: var(--color-warning);
 }
 .ui-status-chip.critical {
   border-color: rgba(239, 68, 68, 0.35);
@@ -3006,7 +3036,7 @@ body {
 .screen-title {
   font-size: 16px;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--text-primary);
   line-height: 1.25;
 }
 .screen-desc {
@@ -3627,3 +3657,188 @@ body {
   .fleet-kpi-grid { grid-template-columns: 1fr; }
   .fleet-engine-grid { grid-template-columns: 1fr; }
 }
+
+/* =========================================================================
+   SCREEN 2: 3D DIGITAL TWIN WORKSTATION STYLES
+   ========================================================================= */
+.twin-screen-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.twin-scrubber-card {
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.twin-scrubber-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.twin-scrubber-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11.5px;
+}
+
+.twin-viewport-skeleton {
+  width: 100%;
+  height: 520px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.twin-focus-banner {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-left: 3px solid var(--cyan);
+}
+
+.twin-focus-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.twin-focus-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.twin-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+@media (max-width: 1200px) {
+  .twin-matrix-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .twin-matrix-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.twin-matrix-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 14px;
+}
+
+.twin-matrix-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 10px;
+}
+
+.twin-matrix-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.twin-matrix-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.twin-matrix-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.twin-matrix-label {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.twin-matrix-val {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 11px;
+}
+
+.twin-matrix-footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.twin-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+@media (max-width: 960px) {
+  .twin-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.twin-chart-card {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.twin-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.twin-chart-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.twin-chart-wrap {
+  height: 220px;
+  width: 100%;
+}
+

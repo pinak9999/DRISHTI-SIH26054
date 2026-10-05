@@ -562,6 +562,7 @@ export const App: React.FC = () => {
                 latestState={latestState}
                 onRefreshEngine={() => loadEngineData(selectedEngineId)}
                 onNavigate={setActiveScreen}
+                backendError={errorBanner}
               />
             )}
 
