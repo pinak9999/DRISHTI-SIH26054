@@ -22,10 +22,12 @@ import {
   Settings,
   ShieldCheck,
   Sliders,
+  Sun,
   Wifi,
   WifiOff,
 } from 'lucide-react';
 import { drishtiApi } from './api/client';
+import { UiLabShowcase } from './screens/UiLabShowcase';
 import {
   ExplainableAlert,
   FleetOverview,
@@ -134,6 +136,32 @@ export const App: React.FC = () => {
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [simMode, setSimMode] = useState<'Simulation' | 'Hardware CAN'>('Simulation');
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('drishti-theme') as 'dark' | 'light') || 'dark';
+    }
+    return 'dark';
+  });
+  const [isUiLab, setIsUiLab] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && window.location.hash === '#/ui-lab';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('drishti-theme', theme);
+  }, [theme]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      setIsUiLab(window.location.hash === '#/ui-lab');
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const toggleTheme = () => {
+    setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+  };
 
   const loadGlobalData = async () => {
     try {
@@ -238,7 +266,7 @@ export const App: React.FC = () => {
   const activeAlertCount = fleet?.total_active_alerts ?? (engineAlerts.length || 0);
 
   return (
-    <div className="workstation-shell">
+    <div className="workstation-shell" data-theme={theme}>
       {/* TOP COMMAND BAR */}
       <header className="topbar">
         {/* Brand Block */}
@@ -348,8 +376,13 @@ export const App: React.FC = () => {
           </div>
 
           {/* Theme visual toggle */}
-          <button className="topbar-icon-btn" title="Dark Tactical Display Mode Active" aria-label="Dark Mode">
-            <Moon size={15} />
+          <button
+            className="topbar-icon-btn"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to Light Display Mode' : 'Switch to Dark Tactical Mode'}
+            aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? <Moon size={15} /> : <Sun size={15} />}
           </button>
 
           {/* Alert Notification Bell */}
@@ -449,6 +482,39 @@ export const App: React.FC = () => {
               <strong>Advisory Digital Twin</strong>
               DRDO SIH26054 Technical Demonstrator. Procedural engine geometry and ML diagnostics. No live flight hardware connection.
             </div>
+            <div style={{ marginTop: 8 }}>
+              {isUiLab ? (
+                <a
+                  href="#"
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: 'var(--cyan)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    textDecoration: 'none',
+                  }}
+                >
+                  ← Return to Operations
+                </a>
+              ) : (
+                <a
+                  href="#/ui-lab"
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: 'var(--cyan)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    textDecoration: 'none',
+                  }}
+                >
+                  🔬 Design System UI Lab
+                </a>
+              )}
+            </div>
           </div>
         </aside>
 
@@ -467,7 +533,11 @@ export const App: React.FC = () => {
           )}
 
           <div className="viewport-content">
-            {activeScreen === 'fleet' && (
+            {isUiLab ? (
+              <UiLabShowcase currentTheme={theme} onToggleTheme={toggleTheme} />
+            ) : (
+              <>
+                {activeScreen === 'fleet' && (
               <FleetCommandCenterScreen
                 fleet={fleet}
                 selectedEngineId={selectedEngineId}
@@ -555,6 +625,8 @@ export const App: React.FC = () => {
                 catalog={catalog}
                 modelStatus={modelStatus}
               />
+            )}
+              </>
             )}
           </div>
         </main>
