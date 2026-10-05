@@ -906,9 +906,17 @@ export const Engine3DViewport: React.FC<{
     3.1, 1.8, 3.3,
   ]);
   const [webglAvailable, setWebglAvailable] = useState<boolean>(true);
+  const [isDocumentVisible, setIsDocumentVisible] = useState<boolean>(() => {
+    return typeof document !== 'undefined' ? document.visibilityState === 'visible' : true;
+  });
 
   useEffect(() => {
     setWebglAvailable(isWebGLSupported());
+    const handleVisibility = () => {
+      setIsDocumentVisible(document.visibilityState === 'visible');
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
   const subsystemStates = useMemo(
@@ -1105,6 +1113,8 @@ export const Engine3DViewport: React.FC<{
             <Canvas
               key={cameraResetKey}
               camera={{ position: cameraPos, fov: 34, near: 0.1, far: 1000 }}
+              dpr={[1, 1.5]}
+              frameloop={isDocumentVisible ? 'always' : 'never'}
               gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
               style={{ width: '100%', height: '100%', flex: 1, minHeight: 330, display: 'block' }}
             >
@@ -1330,6 +1340,8 @@ export const Engine3DViewport: React.FC<{
             <Canvas
               key={cameraResetKey}
               camera={{ position: cameraPos, fov: 34, near: 0.1, far: 1000 }}
+              dpr={[1, 1.5]}
+              frameloop={isDocumentVisible ? 'always' : 'never'}
               gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
               style={{ width: '100%', height: '100%', flex: 1, minHeight: 440, display: 'block' }}
             >
